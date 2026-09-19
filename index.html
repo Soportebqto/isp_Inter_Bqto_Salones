@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SatelCalc TV - Calculador Satelital para Sudamérica y Venezuela</title>
+    <title>SatelCalc TV Pro - Apuntamiento con Mapa Interactivo</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -26,35 +26,42 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS para el Mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Ajuste para que el mapa combine con el tema oscuro de la app */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
     </style>
 </head>
 <body class="bg-darkBg text-slate-100 min-h-screen flex flex-col justify-between selection:bg-accentBlue selection:text-white">
 
     <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50 shadow-sm">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center space-x-3">
                 <div class="bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
                     <i class="fa-solid fa-satellite-dish text-white text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SatelCalc TV</h1>
-                    <p class="text-xs text-slate-400">Apuntamiento de Antenas TV &bull; Especial Venezuela y Sudamérica</p>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SatelCalc TV Pro</h1>
+                    <p class="text-xs text-slate-400">Apuntamiento Satelital con Visualización Geográfica &bull; Venezuela & Sudamérica</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 text-xs text-slate-400 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/60">
                 <i class="fa-brands fa-github text-slate-200 text-sm"></i>
-                <span>Optimizado para GitHub Pages</span>
+                <span>GitHub Pages Ready</span>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
+    <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- Columna Izquierda: Formulario de Ubicación y Satélites -->
+            <!-- Columna Izquierda: Controles y Resultados -->
             <div class="lg:col-span-5 space-y-6">
+                <!-- Tarjeta de Ubicación y Satélites -->
                 <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
                     
@@ -68,30 +75,19 @@
                     </div>
 
                     <form id="satForm" class="space-y-4" onsubmit="event.preventDefault(); calcularApuntamiento();">
-                        <!-- Latitud -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Latitud (°)</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                                    <i class="fa-solid fa-earth-americas text-xs"></i>
-                                </span>
-                                <input type="number" step="any" id="lat" required placeholder="Ej: 10.0648" 
-                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Latitud -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Latitud (°)</label>
+                                <input type="number" step="any" id="lat" required placeholder="Ej: 10.0648" oninput="calcularApuntamiento()"
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
                             </div>
-                            <span class="text-[10px] text-slate-500 mt-1 block">Positiva = Norte, Negativa = Sur (Venezuela: ~10°)</span>
-                        </div>
-
-                        <!-- Longitud -->
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Longitud (°)</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                                    <i class="fa-solid fa-earth-americas text-xs"></i>
-                                </span>
-                                <input type="number" step="any" id="lon" required placeholder="Ej: -69.351" 
-                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
+                            <!-- Longitud -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Longitud (°)</label>
+                                <input type="number" step="any" id="lon" required placeholder="Ej: -69.351" oninput="calcularApuntamiento()"
+                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
                             </div>
-                            <span class="text-[10px] text-slate-500 mt-1 block">Positiva = Este, Negativa = Oeste (Venezuela: ~-69°)</span>
                         </div>
 
                         <!-- Selector de Satélites de TV -->
@@ -103,17 +99,17 @@
                                 </span>
                                 <select id="satSelect" onchange="actualizarSatelite()" 
                                     class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition appearance-none">
-                                    <optgroup label="Venezuela & Zona Norte (Populares)">
-                                        <option value="-15.0">Telstar 12 Vantage (15.0° W - Inter Satelital)</option>
-                                        <option value="-61.0" selected>Amazonas 2/3/4A (61.0° W - Movistar / FTA)</option>
+                                    <optgroup label="Venezuela & Zona Norte">
+                                        <option value="-15.0" selected>Telstar 12 Vantage (15.0° W - Inter Satelital)</option>
+                                        <option value="-61.0">Amazonas 2/3/4A (61.0° W - Movistar / FTA)</option>
                                         <option value="-43.1">Intelsat 11 (43.1° W - DirecTV LatAm)</option>
+                                        <option value="-63.0">Telstar 14R / Estrela do Sul (63.0° W)</option>
                                         <option value="-55.5">Galaxy 34 / Intelsat (55.5° W)</option>
                                         <option value="-30.0">Hispasat 30W-5 / 30W-6 (30.0° W)</option>
                                     </optgroup>
                                     <optgroup label="Sudamérica General / Brasil">
                                         <option value="-70.0">Star One C2 / D2 (70.0° W - Claro Brasil)</option>
                                         <option value="-40.5">SES-6 (40.5° W)</option>
-                                        <option value="-84.0">Tupac Katari 1 (84.0° W - Bolivia)</option>
                                     </optgroup>
                                     <option value="custom">-- Otro / Posición Manual --</option>
                                 </select>
@@ -125,102 +121,98 @@
 
                         <!-- Longitud del Satélite (Editable) -->
                         <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Posición Orbital del Satélite (° W/E)</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                                    <i class="fa-solid fa-bullseye text-xs"></i>
-                                </span>
-                                <input type="number" step="any" id="satLon" required value="-15.0" placeholder="Ej: -15.0" 
-                                    class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
-                            </div>
-                            <span class="text-[10px] text-slate-500 mt-1 block">Negativo para Oeste (W), Positivo para Este (E)</span>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Posición Orbital (° W/E)</label>
+                            <input type="number" step="any" id="satLon" required value="-15.0" oninput="calcularApuntamiento()" placeholder="Ej: -15.0" 
+                                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
                         </div>
-
-                        <!-- Botón Calcular -->
-                        <button type="submit" 
-                            class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-medium py-3 px-4 rounded-xl shadow-lg shadow-blue-500/25 transition active:scale-[0.99] flex items-center justify-center gap-2 mt-2 cursor-pointer">
-                            <i class="fa-solid fa-calculator"></i> Calcular Orientación
-                        </button>
                     </form>
+                </div>
+
+                <!-- Tarjeta de Resultados Numéricos -->
+                <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-6 shadow-xl">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                        <h2 class="text-sm font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-compass text-accentCyan"></i> Valores de Apuntamiento
+                        </h2>
+                        <span id="satNameBadge" class="text-[11px] bg-blue-950/80 text-blue-300 px-2.5 py-1 rounded-full border border-blue-800/50 font-medium">Telstar 12 (15.0° W)</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3 text-center">
+                            <div class="text-accentBlue text-base mb-1"><i class="fa-solid fa-compass-drafting"></i></div>
+                            <div class="text-[10px] text-slate-400 uppercase font-semibold">Azimut</div>
+                            <div id="resAzimuth" class="text-xl font-bold text-white my-0.5">--°</div>
+                            <div id="resAzimuthDir" class="text-[10px] text-slate-400 truncate">Horizontal</div>
+                        </div>
+                        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3 text-center">
+                            <div class="text-accentCyan text-base mb-1"><i class="fa-solid fa-mountain-sun"></i></div>
+                            <div class="text-[10px] text-slate-400 uppercase font-semibold">Elevación</div>
+                            <div id="resElevation" class="text-xl font-bold text-white my-0.5">--°</div>
+                            <div class="text-[10px] text-slate-400">Vertical</div>
+                        </div>
+                        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3 text-center">
+                            <div class="text-emerald-400 text-base mb-1"><i class="fa-solid fa-rotate"></i></div>
+                            <div class="text-[10px] text-slate-400 uppercase font-semibold">Skew (LNB)</div>
+                            <div id="resSkew" class="text-xl font-bold text-white my-0.5">--°</div>
+                            <div class="text-[10px] text-slate-400">Rotación</div>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 text-center"><i class="fa-solid fa-circle-info text-accentCyan"></i> El mapa interactivo muestra la dirección visual hacia la posición del satélite.</p>
                 </div>
             </div>
 
-            <!-- Columna Derecha: Resultados y Guía -->
-            <div class="lg:col-span-7 space-y-6">
-                <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-6 shadow-xl relative min-h-[440px] flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-                            <h2 class="text-base font-semibold flex items-center gap-2">
-                                <i class="fa-solid fa-compass text-accentCyan"></i> Resultados de Apuntamiento
-                            </h2>
-                            <span id="satNameBadge" class="text-xs bg-blue-950/80 text-blue-300 px-3 py-1.5 rounded-full border border-blue-800/50 font-medium">Telstar 12 Vantage (15.0° W)</span>
-                        </div>
-
-                        <!-- Tarjetas de Resultados -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <!-- Azimut -->
-                            <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-4 text-center relative overflow-hidden group hover:border-slate-700 transition">
-                                <div class="text-accentBlue mb-2 text-xl"><i class="fa-solid fa-compass-drafting"></i></div>
-                                <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Azimut</div>
-                                <div id="resAzimuth" class="text-2xl font-bold text-white my-1">--°</div>
-                                <div id="resAzimuthDir" class="text-[11px] text-slate-400">Orientación horizontal</div>
-                            </div>
-
-                            <!-- Elevación -->
-                            <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-4 text-center relative overflow-hidden group hover:border-slate-700 transition">
-                                <div class="text-accentCyan mb-2 text-xl"><i class="fa-solid fa-mountain-sun"></i></div>
-                                <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Elevación</div>
-                                <div id="resElevation" class="text-2xl font-bold text-white my-1">--°</div>
-                                <div class="text-[11px] text-slate-400">Inclinación vertical</div>
-                            </div>
-
-                            <!-- Skew / Polarización -->
-                            <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-4 text-center relative overflow-hidden group hover:border-slate-700 transition">
-                                <div class="text-emerald-400 mb-2 text-xl"><i class="fa-solid fa-rotate"></i></div>
-                                <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Polarización (Skew)</div>
-                                <div id="resSkew" class="text-2xl font-bold text-white my-1">--°</div>
-                                <div class="text-[11px] text-slate-400">Rotación del LNB</div>
-                            </div>
-                        </div>
-
-                        <!-- Guía Práctica -->
-                        <div class="bg-slate-900/90 border border-slate-800/80 rounded-xl p-4">
-                            <h3 class="text-xs font-semibold text-slate-200 mb-3 flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-info text-cyan-400"></i> Guía de Instalación para Antenas TV
-                            </h3>
-                            <ul class="text-xs text-slate-400 space-y-2">
-                                <li class="flex items-start gap-2">
-                                    <i class="fa-solid fa-check text-green-400 mt-0.5"></i>
-                                    <span><strong>Azimut:</strong> Gira el plato de izquierda a derecha usando una brújula hasta fijar el ángulo horizontal indicado.</span>
-                                </li>
-                                <li class="flex items-start gap-2">
-                                    <i class="fa-solid fa-check text-green-400 mt-0.5"></i>
-                                    <span><strong>Elevación:</strong> Inclina el plato hacia arriba o abajo utilizando los grados marcados en el soporte de la antena.</span>
-                                </li>
-                                <li class="flex items-start gap-2">
-                                    <i class="fa-solid fa-check text-green-400 mt-0.5"></i>
-                                    <span><strong>Skew (LNB):</strong> Rota el LNB en sentido horario o antihorario según el valor de polarización para maximizar la calidad de señal.</span>
-                                </li>
-                            </ul>
-                        </div>
+            <!-- Columna Derecha: Mapa Interactivo Leaflet -->
+            <div class="lg:col-span-7">
+                <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-4 shadow-xl h-full flex flex-col">
+                    <div class="flex justify-between items-center mb-3 px-2">
+                        <h2 class="text-sm font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-accentBlue"></i> Visualización Geográfica de Apuntamiento
+                        </h2>
+                        <span class="text-[11px] text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">Línea de orientación aproximada</span>
                     </div>
-
-                    <!-- Pie de tarjeta -->
-                    <div class="mt-6 pt-4 border-t border-slate-800/80 text-center">
-                        <p class="text-[11px] text-slate-500">Cálculos astronómicos y trigonométricos basados en órbita geoestacionaria.</p>
-                    </div>
+                    <!-- Contenedor del Mapa con altura adaptada -->
+                    <div id="map" class="w-full flex-grow rounded-xl min-h-[450px] z-10 border border-slate-800"></div>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <footer class="border-t border-slate-800 bg-slate-900/30 py-6 text-center text-xs text-slate-500">
-        <p>SatelCalc TV &bull; Listo para GitHub Pages</p>
+    <footer class="border-t border-slate-800 bg-slate-900/35 py-6 text-center text-xs text-slate-500">
+        <p>SatelCalc TV Pro &bull; Optimizado para GitHub Pages &bull; Diseñado para Sudamérica y Venezuela</p>
     </footer>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        // Actualizar valores automáticamente según el satélite seleccionado
+        let map;
+        let markerAntena;
+        let markerSatPseudo;
+        let polylineapunte;
+
+        // Inicializar el mapa al cargar la página
+        function initMap() {
+            // Coordenadas por defecto (Barquisimeto, Venezuela)
+            const defaultLat = 10.0648;
+            const defaultLon = -69.3510;
+
+            document.getElementById('lat').value = defaultLat;
+            document.getElementById('lon').value = defaultLon;
+
+            // Crear mapa centrado en la ubicación
+            map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 6);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Capa de mosaicos (CartoDB Dark Matter optimizada para tema oscuro)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap & CartoDB',
+                maxZoom: 19
+            }).addTo(map);
+
+            calcularApuntamiento();
+        }
+
+        // Actualizar valores de satélite según selección
         function actualizarSatelite() {
             const select = document.getElementById('satSelect');
             const satLonInput = document.getElementById('satLon');
@@ -236,7 +228,7 @@
             }
         }
 
-        // Obtener ubicación GPS de forma automática
+        // Obtener ubicación GPS del usuario
         function obtenerUbicacionGPS() {
             const btn = document.getElementById('gpsBtn');
             if (!navigator.geolocation) {
@@ -257,14 +249,14 @@
                     calcularApuntamiento();
                 },
                 (error) => {
-                    alert("No se pudo obtener la ubicación GPS. Por favor ingrésala manualmente.");
+                    alert("No se pudo obtener la ubicación GPS automáticamente. Ingrésala manualmente.");
                     btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> Usar mi GPS`;
                 },
                 { timeout: 10000, enableHighAccuracy: true }
             );
         }
 
-        // Algoritmo matemático de cálculo de Azimut, Elevación y Skew
+        // Algoritmo matemático y actualización del mapa
         function calcularApuntamiento() {
             let latInput = parseFloat(document.getElementById('lat').value);
             let lonInput = parseFloat(document.getElementById('lon').value);
@@ -279,7 +271,7 @@
             const deltaLon = lonInput - satLonInput;
             const deltaLonRad = deltaLon * (Math.PI / 180.0);
 
-            // Constantes geométricas de la Tierra y órbita geoestacionaria (km)
+            // Constantes geométricas
             const r_geo = 42164.0;
             const r_earth = 6378.14;
 
@@ -287,39 +279,97 @@
             const sinLat = Math.sin(latRad);
             const cosDeltaLon = Math.cos(deltaLonRad);
 
-            // 1. Cálculo de Elevación
+            // 1. Elevación
             const psi = Math.acos(cosLat * cosDeltaLon);
             const elev = (180.0 / Math.PI) * Math.atan((Math.cos(psi) - (r_earth / r_geo)) / Math.sin(psi));
 
-            // 2. Cálculo de Azimut
+            // 2. Azimut
             let azCalc = 180.0 + (180.0 / Math.PI) * Math.atan2(Math.tan(deltaLonRad), sinLat);
             if (latInput < 0) {
                 azCalc = 180.0 - (180.0 / Math.PI) * Math.atan2(Math.tan(deltaLonRad), -sinLat);
             }
             azCalc = (azCalc + 360) % 360;
 
-            // 3. Cálculo de Polarización (Skew)
-            let skew = (180.0 / Math.PI) * Math.atan(Math.sin(deltaLonRad) / Math.tan(latLat));
+            // 3. Skew (Polarización)
+            let skew = (180.0 / Math.PI) * Math.atan(Math.sin(deltaLonRad) / Math.tan(latRad));
             if (isNaN(skew)) skew = 0.0;
 
-            // Renderizar resultados en pantalla
+            // Mostrar resultados en interfaz
             document.getElementById('resAzimuth').textContent = azCalc.toFixed(1) + '°';
             
             let puntoCardinal = "Norte";
-            if (azCalc >= 45 && azCalc < 135) puntoCardinal = "Este";
-            else if (azCalc >= 135 && azCalc < 225) puntoCardinal = "Sur";
-            else if (azCalc >= 225 && azCalc < 315) puntoCardinal = "Oeste";
+            if (azCalc >= 45 && azCalc < 135) puntoCardinal = "Este (E)";
+            else if (azCalc >= 135 && azCalc < 225) puntoCardinal = "Sur (S)";
+            else if (azCalc >= 225 && azCalc < 315) puntoCardinal = "Oeste (W)";
+            else if (azCalc >= 315 || azCalc < 45) puntoCardinal = "Norte (N)";
             
-            document.getElementById('resAzimuthDir').textContent = `Punto cardinal: ${puntoCardinal}`;
+            document.getElementById('resAzimuthDir').textContent = puntoCardinal;
             document.getElementById('resElevation').textContent = elev.toFixed(1) + '°';
             document.getElementById('resSkew').textContent = skew.toFixed(1) + '°';
+
+            // Actualizar Mapa
+            actualizarMapaVisual(latInput, lonInput, azCalc);
         }
 
-        // Establecer coordenadas por defecto (ej. Venezuela / Barquisimeto) al cargar
+        // Actualizar marcadores y línea de apuntamiento en Leaflet
+        function actualizarMapaVisual(lat, lon, azimut) {
+            const coordAntena = [lat, lon];
+            
+            // Centrar mapa
+            map.setView(coordAntena, 7);
+
+            // Actualizar o crear marcador de la antena
+            if (markerAntena) {
+                markerAntena.setLatLng(coordAntena);
+            } else {
+                const iconoAntena = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(59,130,246,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite-dish text-xs"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+                markerAntena = L.marker(coordAntena, { icon: iconoAntena }).addTo(map).bindPopup("<b>Tu Ubicación (Antena TV)</b>");
+            }
+
+            // Calcular un punto proyectado en la dirección del azimut para dibujar la línea visual (ej. ~300 km en esa dirección)
+            const distanciaSimuladaGrados = 2.5; // Aproximación visual en mapa
+            const azimutRad = azimut * (Math.PI / 180.0);
+            
+            // Trigonometría esférica aproximada para proyección en mapa
+            const latDestino = lat + (distanciaSimuladaGrados * Math.cos(azimutRad));
+            const lonDestino = lon + (distanciaSimuladaGrados * Math.sin(azimutRad) / Math.cos(lat * Math.PI / 180.0));
+            const coordDestinoSat = [latDestino, lonDestino];
+
+            // Actualizar marcador virtual del satélite en la dirección de apunte
+            if (markerSatPseudo) {
+                markerSatPseudo.setLatLng(coordDestinoSat);
+            } else {
+                const iconoSat = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: #06b6d4; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(6,182,212,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite text-xs"></i></div>`,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                });
+                markerSatPseudo = L.marker(coordDestinoSat, { icon: iconoSat }).addTo(map).bindPopup("<b>Dirección Óptica del Satélite</b><br>Gira tu plato hacia este rumbo.");
+            }
+
+            // Actualizar línea punteada de conexión
+            const latlngs = [coordAntena, coordDestinoSat];
+            if (polylineapunte) {
+                polylineapunte.setLatLngs(latlngs);
+            } else {
+                polylineapunte = L.polyline(latlngs, {
+                    color: '#06b6d4',
+                    weight: 3,
+                    dashArray: '6, 6',
+                    opacity: 0.8
+                }).addTo(map);
+            }
+        }
+
+        // Ejecutar al cargar la ventana
         window.onload = function() {
-            document.getElementById('lat').value = "10.0648";
-            document.getElementById('lon').value = "-69.3510";
-            calcularApuntamiento();
+            initMap();
         };
     </script>
 </body>
