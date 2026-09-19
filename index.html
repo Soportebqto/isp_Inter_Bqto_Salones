@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satfinder Pro - Apuntamiento con Vista Satelital</title>
+    <title>Satfinder - Apuntamiento con Vista Satelital</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -47,10 +47,10 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center space-x-3">
                 <div class="bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
-                    <i class="fa-solid fa-satellite-dish text-white text-xl"></i>
+                    <i class="fa-solid fa-satellite text-white text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SatelCalc TV Pro</h1>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Satfinder</h1>
                     <p class="text-xs text-slate-400">Apuntamiento Satelital con Vista Satelital Real &bull; Venezuela & Sudamérica</p>
                 </div>
             </div>
@@ -58,10 +58,6 @@
                 <button onclick="togglePanel()" id="togglePanelBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 font-medium cursor-pointer shadow-sm">
                     <i class="fa-solid fa-eye-slash" id="toggleIcon"></i> <span id="toggleText">Ocultar Menú</span>
                 </button>
-                <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/60">
-                    <i class="fa-solid fa-hand-pointer text-accentCyan text-sm"></i>
-                    <span>Arrastra el pin en el mapa</span>
-                </div>
             </div>
         </div>
     </header>
@@ -77,7 +73,7 @@
                     
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-sm font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-accentBlue"></i> Tu Ubicación <span class="text-[10px] text-accentCyan font-normal">(Arrastrable en el mapa)</span>
+                            <i class="fa-solid fa-location-dot text-accentBlue"></i> Tu Ubicación
                         </h2>
                         <button onclick="obtenerUbicacionGPS()" id="gpsBtn" class="text-xs bg-blue-600/20 hover:bg-blue-600/30 text-accentBlue border border-blue-500/30 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-medium cursor-pointer">
                             <i class="fa-solid fa-location-crosshairs"></i> GPS
@@ -168,7 +164,7 @@
                             <div class="text-[9px] text-slate-400">Rotación</div>
                         </div>
                     </div>
-                    <p class="text-[10px] text-slate-400 text-center"><i class="fa-solid fa-hand text-accentCyan"></i> Tip: Mantén presionado o arrastra el pin azul en el mapa sobre tu techo o casa exacta.</p>
+                    <p class="text-[10px] text-slate-400 text-center"><i class="fa-solid fa-hand text-accentCyan"></i> Tip: Arrastra el pin azul en el mapa sobre tu techo o casa exacta.</p>
                 </div>
             </div>
 
@@ -177,9 +173,8 @@
                 <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-4 shadow-xl h-full flex flex-col">
                     <div class="flex justify-between items-center mb-3 px-2">
                         <h2 class="text-sm font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-earth-americas text-accentBlue"></i> Vista Satelital Interactiva <span class="text-xs font-normal text-slate-400">(Pin Arrastrable)</span>
+                            <i class="fa-solid fa-earth-americas text-accentBlue"></i> Vista Satelital Interactiva
                         </h2>
-                        <span class="text-[11px] text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">Esri World Imagery</span>
                     </div>
                     <!-- Contenedor del Mapa Satelital -->
                     <div id="map" class="w-full flex-grow rounded-xl min-h-[500px] z-10 border border-slate-800"></div>
@@ -190,7 +185,7 @@
     </main>
 
     <footer class="border-t border-slate-800 bg-slate-900/35 py-6 text-center text-xs text-slate-500">
-        <p>SatelCalc TV Pro &bull; Arrastra el marcador o usa GPS &bull; Ideal para Venezuela y Sudamérica</p>
+        <p>Satfinder &bull; Arrastra el marcador o usa GPS &bull; Ideal para Venezuela y Sudamérica</p>
     </footer>
 
     <!-- Leaflet JS -->
@@ -202,7 +197,7 @@
         let polylineapunte;
         let isPanelVisible = true;
 
-        // Inicializar el mapa con Vista Satelital Real de Esri y pin arrastrable
+        // Inicializar el mapa con Vista Satelital Real y pin arrastrable
         function initMap() {
             const defaultLat = 10.0648;
             const defaultLon = -69.3510;
@@ -210,7 +205,7 @@
             document.getElementById('lat').value = defaultLat;
             document.getElementById('lon').value = defaultLon;
 
-            map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 18); // Zoom bien cercano para ver techos
+            map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 18);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -218,7 +213,6 @@
                 maxZoom: 19
             }).addTo(map);
 
-            // Crear icono arrastrable para la antena
             const iconoAntena = L.divIcon({
                 className: 'custom-div-icon',
                 html: `<div style="background-color: #3b82f6; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 15px rgba(59,130,246,0.9); border: 2px solid white; cursor: grab;"><i class="fa-solid fa-satellite-dish text-base"></i></div>`,
@@ -231,14 +225,13 @@
                 draggable: true 
             }).addTo(map);
 
-            markerAntena.bindPopup("<b>Tu Antena</b><br>¡Arrastrame sobre tu casa o techo exacto!").openPopup();
+            markerAntena.bindPopup("<b>Tu Antena</b><br>¡Arrástrame sobre tu casa o techo exacto!").openPopup();
 
-            // Evento al arrastrar el marcador con ratón o touch (Actualiza en tiempo real con calcularApuntamiento(false))
             markerAntena.on('drag', function(e) {
                 const pos = markerAntena.getLatLng();
                 document.getElementById('lat').value = pos.lat.toFixed(6);
                 document.getElementById('lon').value = pos.lng.toFixed(6);
-                calcularApuntamiento(false); // Actualiza la línea y el satélite en tiempo real mientras se arrastra
+                calcularApuntamiento(false);
             });
 
             markerAntena.on('dragend', function(e) {
@@ -248,7 +241,6 @@
                 calcularApuntamiento(false);
             });
 
-            // Permitir hacer clic en el mapa para mover la antena instantáneamente
             map.on('click', function(e) {
                 markerAntena.setLatLng(e.latlng);
                 document.getElementById('lat').value = e.latlng.lat.toFixed(6);
@@ -259,7 +251,7 @@
             calcularApuntamiento(true);
         }
 
-        // Alternar visibilidad del panel de control para maximizar el mapa
+        // Alternar visibilidad del panel de control
         function togglePanel() {
             const panel = document.getElementById('controlPanel');
             const mapContainer = document.getElementById('mapContainer');
@@ -281,7 +273,6 @@
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
-        // Actualizar satélite seleccionado
         function actualizarSatelite() {
             const select = document.getElementById('satSelect');
             const satLonInput = document.getElementById('satLon');
@@ -297,7 +288,6 @@
             }
         }
 
-        // Obtener ubicación GPS con alta precisión
         function obtenerUbicacionGPS() {
             const btn = document.getElementById('gpsBtn');
             if (!navigator.geolocation) {
@@ -332,7 +322,6 @@
             );
         }
 
-        // Cuando se escriben coordenadas manualmente en los inputs
         function actualizarDesdeInputs() {
             let lat = parseFloat(document.getElementById('lat').value);
             let lon = parseFloat(document.getElementById('lon').value);
@@ -343,7 +332,6 @@
             }
         }
 
-        // Cálculo matemático de azimut, elevación y skew
         function calcularApuntamiento(centerMap = false) {
             let latInput = parseFloat(document.getElementById('lat').value);
             let lonInput = parseFloat(document.getElementById('lon').value);
@@ -364,18 +352,15 @@
             const sinLat = Math.sin(latRad);
             const cosDeltaLon = Math.cos(deltaLonRad);
 
-            // 1. Elevación
             const psi = Math.acos(cosLat * cosDeltaLon);
             const elev = (180.0 / Math.PI) * Math.atan((Math.cos(psi) - (r_earth / r_geo)) / Math.sin(psi));
 
-            // 2. Azimut
             let azCalc = 180.0 + (180.0 / Math.PI) * Math.atan2(Math.tan(deltaLonRad), sinLat);
             if (latInput < 0) {
                 azCalc = 180.0 - (180.0 / Math.PI) * Math.atan2(Math.tan(deltaLonRad), -sinLat);
             }
             azCalc = (azCalc + 360) % 360;
 
-            // 3. Skew
             let skew = (180.0 / Math.PI) * Math.atan(Math.sin(deltaLonRad) / Math.tan(latRad));
             if (isNaN(skew)) skew = 0.0;
 
@@ -394,7 +379,6 @@
             actualizarMapaVisual(latInput, lonInput, azCalc, centerMap);
         }
 
-        // Actualizar línea de apuntamiento y marcador satelital en el mapa
         function actualizarMapaVisual(lat, lon, azimut, centerMap) {
             const coordAntena = [lat, lon];
             
@@ -403,7 +387,6 @@
                     map.setView(coordAntena, map.getZoom());
                 }
 
-                // Punto proyectado corto en la dirección exacta del azimut
                 const distanciaSimuladaGrados = 0.0025;
                 const azimutRad = azimut * (Math.PI / 180.0);
                 
