@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SatelCalc TV Pro - Apuntamiento con Vista Satelital</title>
+    <title>Satfinder Pro - Apuntamiento con Vista Satelital</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -110,9 +110,10 @@
                                 <select id="satSelect" onchange="actualizarSatelite()" 
                                     class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition appearance-none">
                                     <optgroup label="Venezuela & Zona Norte">
-                                        <option value="-43.1" selected>Intelsat 11 (43.1° W - SimpleTV / DirecTV)</option>
+                                        <option value="-101.1" selected>DirecTV / SimpleTV (101.1° W - DTV-9S)</option>
                                         <option value="-15.0">Telstar 12 Vantage (15.0° W - Inter Satelital)</option>
                                         <option value="-61.0">Amazonas 2/3/4A (61.0° W - Movistar / FTA)</option>
+                                        <option value="-43.1">Intelsat 11 (43.1° W)</option>
                                         <option value="-63.0">Telstar 14R / Estrela do Sul (63.0° W)</option>
                                         <option value="-55.5">Galaxy 34 / Intelsat (55.5° W)</option>
                                         <option value="-30.0">Hispasat 30W-5 / 30W-6 (30.0° W)</option>
@@ -132,7 +133,7 @@
                         <!-- Longitud del Satélite (Editable) -->
                         <div>
                             <label class="block text-[11px] font-medium text-slate-400 mb-1">Posición Orbital (° W/E)</label>
-                            <input type="number" step="any" id="satLon" required value="-43.1" oninput="calcularApuntamiento()" placeholder="Ej: -43.1" 
+                            <input type="number" step="any" id="satLon" required value="-101.1" oninput="calcularApuntamiento()" placeholder="Ej: -101.1" 
                                 class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
                         </div>
                     </form>
@@ -144,26 +145,7 @@
                         <h2 class="text-xs font-semibold flex items-center gap-2">
                             <i class="fa-solid fa-compass text-accentCyan"></i> Valores de Apuntamiento
                         </h2>
-                        <span id="satNameBadge" class="text-[10px] bg-blue-950/80 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-800/50 font-medium">Intelsat 11 (43.1° W)</span>
-                    </div>
-                        </div>
-
-                        <!-- Longitud del Satélite (Editable) -->
-                        <div>
-                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Posición Orbital (° W/E)</label>
-                            <input type="number" step="any" id="satLon" required value="-15.0" oninput="calcularApuntamiento()" placeholder="Ej: -15.0" 
-                                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Tarjeta de Resultados Numéricos -->
-                <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-5 shadow-xl">
-                    <div class="flex justify-between items-center mb-3 border-b border-slate-800 pb-2.5">
-                        <h2 class="text-xs font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-compass text-accentCyan"></i> Valores de Apuntamiento
-                        </h2>
-                        <span id="satNameBadge" class="text-[10px] bg-blue-950/80 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-800/50 font-medium">Telstar 12 (15.0° W)</span>
+                        <span id="satNameBadge" class="text-[10px] bg-blue-950/80 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-800/50 font-medium">DirecTV / SimpleTV (101.1° W)</span>
                     </div>
 
                     <div class="grid grid-cols-3 gap-2.5 mb-3">
