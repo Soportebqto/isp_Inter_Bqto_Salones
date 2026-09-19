@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SatelCalc TV Pro - Apuntamiento con Mapa Interactivo</title>
+    <title>SatelCalc TV Pro - Apuntamiento con Vista Satelital</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -30,9 +30,14 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Ajuste para que el mapa combine con el tema oscuro de la app */
-        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        /* Ajuste de controles del mapa para modo oscuro/satelital */
+        .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
+            background-color: rgba(15, 23, 42, 0.85) !important;
+            color: #cbd5e1 !important;
+            border-color: #334155 !important;
+        }
+        .leaflet-control-attribution a {
+            color: #38bdf8 !important;
         }
     </style>
 </head>
@@ -46,12 +51,12 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SatelCalc TV Pro</h1>
-                    <p class="text-xs text-slate-400">Apuntamiento Satelital con Visualización Geográfica &bull; Venezuela & Sudamérica</p>
+                    <p class="text-xs text-slate-400">Apuntamiento Satelital con Vista Satelital Real &bull; Venezuela & Sudamérica</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3 text-xs text-slate-400 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/60">
                 <i class="fa-brands fa-github text-slate-200 text-sm"></i>
-                <span>GitHub Pages Ready &bull; Sin API Keys</span>
+                <span>GitHub Pages Ready &bull; Vista Satelital Esri</span>
             </div>
         </div>
     </header>
@@ -157,21 +162,21 @@
                             <div class="text-[10px] text-slate-400">Rotación</div>
                         </div>
                     </div>
-                    <p class="text-[11px] text-slate-500 text-center"><i class="fa-solid fa-circle-info text-accentCyan"></i> El mapa interactivo muestra la dirección visual hacia la posición del satélite.</p>
+                    <p class="text-[11px] text-slate-500 text-center"><i class="fa-solid fa-circle-info text-accentCyan"></i> El mapa con vista satelital te permite ubicar tu casa o estructura con precisión.</p>
                 </div>
             </div>
 
-            <!-- Columna Derecha: Mapa Interactivo Leaflet -->
+            <!-- Columna Derecha: Mapa Interactivo con Vista Satelital -->
             <div class="lg:col-span-7">
                 <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-4 shadow-xl h-full flex flex-col">
                     <div class="flex justify-between items-center mb-3 px-2">
                         <h2 class="text-sm font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-map-location-dot text-accentBlue"></i> Visualización Geográfica de Apuntamiento
+                            <i class="fa-solid fa-earth-americas text-accentBlue"></i> Vista Satelital y Línea de Apuntamiento
                         </h2>
-                        <span class="text-[11px] text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">Línea de orientación aproximada</span>
+                        <span class="text-[11px] text-slate-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">Fotografía Aérea Real</span>
                     </div>
-                    <!-- Contenedor del Mapa con altura adaptada -->
-                    <div id="map" class="w-full flex-grow rounded-xl min-h-[450px] z-10 border border-slate-800"></div>
+                    <!-- Contenedor del Mapa Satelital -->
+                    <div id="map" class="w-full flex-grow rounded-xl min-h-[480px] z-10 border border-slate-800"></div>
                 </div>
             </div>
 
@@ -179,7 +184,7 @@
     </main>
 
     <footer class="border-t border-slate-800 bg-slate-900/35 py-6 text-center text-xs text-slate-500">
-        <p>SatelCalc TV Pro &bull; Optimizado para GitHub Pages &bull; Diseñado para Sudamérica y Venezuela</p>
+        <p>SatelCalc TV Pro &bull; Vista Satelital Esri &bull; Ideal para Venezuela y Sudamérica</p>
     </footer>
 
     <!-- Leaflet JS -->
@@ -190,7 +195,7 @@
         let markerSatPseudo;
         let polylineapunte;
 
-        // Inicializar el mapa al cargar la página
+        // Inicializar el mapa con Vista Satelital Real de Esri
         function initMap() {
             // Coordenadas por defecto (Barquisimeto, Venezuela)
             const defaultLat = 10.0648;
@@ -200,12 +205,12 @@
             document.getElementById('lon').value = defaultLon;
 
             // Crear mapa centrado en la ubicación
-            map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 6);
+            map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 17); // Zoom más cercano para ver techos y calles
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-            // Capa estándar de OpenStreetMap optimizada con filtro oscuro
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
+            // Capa de Esri World Imagery (Vista Satelital Real y gratuita sin API Key)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, swisstopo, and the GIS User Community',
                 maxZoom: 19
             }).addTo(map);
 
@@ -228,7 +233,7 @@
             }
         }
 
-        // Obtener ubicación GPS del usuario
+        // Obtener ubicación GPS del usuario con alta precisión
         function obtenerUbicacionGPS() {
             const btn = document.getElementById('gpsBtn');
             if (!navigator.geolocation) {
@@ -240,8 +245,8 @@
             
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    document.getElementById('lat').value = position.coords.latitude.toFixed(4);
-                    document.getElementById('lon').value = position.coords.longitude.toFixed(4);
+                    document.getElementById('lat').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('lon').value = position.coords.longitude.toFixed(6);
                     btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> ¡Obtenido!`;
                     setTimeout(() => {
                         btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> Usar mi GPS`;
@@ -256,7 +261,7 @@
             );
         }
 
-        // Algoritmo matemático y actualización del mapa
+        // Algoritmo matemático y actualización del mapa satelital
         function calcularApuntamiento() {
             let latInput = parseFloat(document.getElementById('lat').value);
             let lonInput = parseFloat(document.getElementById('lon').value);
@@ -307,17 +312,16 @@
             document.getElementById('resElevation').textContent = elev.toFixed(1) + '°';
             document.getElementById('resSkew').textContent = skew.toFixed(1) + '°';
 
-            // Actualizar Mapa
+            // Actualizar Mapa Satelital
             actualizarMapaVisual(latInput, lonInput, azCalc);
         }
 
-        // Actualizar marcadores y línea de apuntamiento en Leaflet
+        // Actualizar marcadores y línea de apuntamiento sobre la imagen satelital real
         function actualizarMapaVisual(lat, lon, azimut) {
             const coordAntena = [lat, lon];
             
-            // Centrar mapa de forma segura
             if (map) {
-                map.setView(coordAntena, 7);
+                map.setView(coordAntena, 17);
 
                 // Actualizar o crear marcador de la antena
                 if (markerAntena) {
@@ -325,15 +329,15 @@
                 } else {
                     const iconoAntena = L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(59,130,246,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite-dish text-xs"></i></div>`,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
+                        html: `<div style="background-color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 12px rgba(59,130,246,0.9); border: 2px solid white;"><i class="fa-solid fa-satellite-dish text-sm"></i></div>`,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
                     });
-                    markerAntena = L.marker(coordAntena, { icon: iconoAntena }).addTo(map).bindPopup("<b>Tu Ubicación (Antena TV)</b>");
+                    markerAntena = L.marker(coordAntena, { icon: iconoAntena }).addTo(map).bindPopup("<b>Tu Ubicación</b><br>Aquí se encuentra la antena.");
                 }
 
-                // Calcular un punto proyectado en la dirección del azimut para dibujar la línea visual
-                const distanciaSimuladaGrados = 2.5; 
+                // Calcular un punto proyectado corto en la dirección exacta del azimut para visualizar el rumbo en el terreno
+                const distanciaSimuladaGrados = 0.003; // Distancia corta sobre la vista satelital cercana
                 const azimutRad = azimut * (Math.PI / 180.0);
                 
                 const latDestino = lat + (distanciaSimuladaGrados * Math.cos(azimutRad));
@@ -345,11 +349,11 @@
                 } else {
                     const iconoSat = L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div style="background-color: #06b6d4; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(6,182,212,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite text-xs"></i></div>`,
-                        iconSize: [26, 26],
-                        iconAnchor: [13, 13]
+                        html: `<div style="background-color: #06b6d4; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 12px rgba(6,182,212,0.9); border: 2px solid white;"><i class="fa-solid fa-arrow-pointer text-xs"></i></div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
                     });
-                    markerSatPseudo = L.marker(coordDestinoSat, { icon: iconoSat }).addTo(map).bindPopup("<b>Dirección Óptica del Satélite</b><br>Gira tu plato hacia este rumbo.");
+                    markerSatPseudo = L.marker(coordDestinoSat, { icon: iconoSat }).addTo(map).bindPopup("<b>Rumbo de Apuntamiento</b><br>Orientación de la antena hacia el satélite.");
                 }
 
                 const latlngs = [coordAntena, coordDestinoSat];
@@ -357,10 +361,10 @@
                     polylineapunte.setLatLngs(latlngs);
                 } else {
                     polylineapunte = L.polyline(latlngs, {
-                        color: '#06b6d4',
-                        weight: 3,
-                        dashArray: '6, 6',
-                        opacity: 0.8
+                        color: '#38bdf8',
+                        weight: 4,
+                        dashArray: '8, 8',
+                        opacity: 0.95
                     }).addTo(map);
                 }
             }
