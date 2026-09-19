@@ -51,7 +51,7 @@
             </div>
             <div class="flex items-center space-x-3 text-xs text-slate-400 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/60">
                 <i class="fa-brands fa-github text-slate-200 text-sm"></i>
-                <span>GitHub Pages Ready</span>
+                <span>GitHub Pages Ready &bull; Sin API Keys</span>
             </div>
         </div>
     </header>
@@ -203,9 +203,9 @@
             map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLon], 6);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-            // Capa de mosaicos (CartoDB Dark Matter optimizada para tema oscuro)
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap & CartoDB',
+            // Capa estándar de OpenStreetMap optimizada con filtro oscuro
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
@@ -315,62 +315,61 @@
         function actualizarMapaVisual(lat, lon, azimut) {
             const coordAntena = [lat, lon];
             
-            // Centrar mapa
-            map.setView(coordAntena, 7);
+            // Centrar mapa de forma segura
+            if (map) {
+                map.setView(coordAntena, 7);
 
-            // Actualizar o crear marcador de la antena
-            if (markerAntena) {
-                markerAntena.setLatLng(coordAntena);
-            } else {
-                const iconoAntena = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(59,130,246,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite-dish text-xs"></i></div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                markerAntena = L.marker(coordAntena, { icon: iconoAntena }).addTo(map).bindPopup("<b>Tu Ubicación (Antena TV)</b>");
-            }
+                // Actualizar o crear marcador de la antena
+                if (markerAntena) {
+                    markerAntena.setLatLng(coordAntena);
+                } else {
+                    const iconoAntena = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #3b82f6; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(59,130,246,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite-dish text-xs"></i></div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+                    markerAntena = L.marker(coordAntena, { icon: iconoAntena }).addTo(map).bindPopup("<b>Tu Ubicación (Antena TV)</b>");
+                }
 
-            // Calcular un punto proyectado en la dirección del azimut para dibujar la línea visual (ej. ~300 km en esa dirección)
-            const distanciaSimuladaGrados = 2.5; // Aproximación visual en mapa
-            const azimutRad = azimut * (Math.PI / 180.0);
-            
-            // Trigonometría esférica aproximada para proyección en mapa
-            const latDestino = lat + (distanciaSimuladaGrados * Math.cos(azimutRad));
-            const lonDestino = lon + (distanciaSimuladaGrados * Math.sin(azimutRad) / Math.cos(lat * Math.PI / 180.0));
-            const coordDestinoSat = [latDestino, lonDestino];
+                // Calcular un punto proyectado en la dirección del azimut para dibujar la línea visual
+                const distanciaSimuladaGrados = 2.5; 
+                const azimutRad = azimut * (Math.PI / 180.0);
+                
+                const latDestino = lat + (distanciaSimuladaGrados * Math.cos(azimutRad));
+                const lonDestino = lon + (distanciaSimuladaGrados * Math.sin(azimutRad) / Math.cos(lat * Math.PI / 180.0));
+                const coordDestinoSat = [latDestino, lonDestino];
 
-            // Actualizar marcador virtual del satélite en la dirección de apunte
-            if (markerSatPseudo) {
-                markerSatPseudo.setLatLng(coordDestinoSat);
-            } else {
-                const iconoSat = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color: #06b6d4; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(6,182,212,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite text-xs"></i></div>`,
-                    iconSize: [26, 26],
-                    iconAnchor: [13, 13]
-                });
-                markerSatPseudo = L.marker(coordDestinoSat, { icon: iconoSat }).addTo(map).bindPopup("<b>Dirección Óptica del Satélite</b><br>Gira tu plato hacia este rumbo.");
-            }
+                if (markerSatPseudo) {
+                    markerSatPseudo.setLatLng(coordDestinoSat);
+                } else {
+                    const iconoSat = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color: #06b6d4; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 0 10px rgba(6,182,212,0.6); border: 2px solid white;"><i class="fa-solid fa-satellite text-xs"></i></div>`,
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    });
+                    markerSatPseudo = L.marker(coordDestinoSat, { icon: iconoSat }).addTo(map).bindPopup("<b>Dirección Óptica del Satélite</b><br>Gira tu plato hacia este rumbo.");
+                }
 
-            // Actualizar línea punteada de conexión
-            const latlngs = [coordAntena, coordDestinoSat];
-            if (polylineapunte) {
-                polylineapunte.setLatLngs(latlngs);
-            } else {
-                polylineapunte = L.polyline(latlngs, {
-                    color: '#06b6d4',
-                    weight: 3,
-                    dashArray: '6, 6',
-                    opacity: 0.8
-                }).addTo(map);
+                const latlngs = [coordAntena, coordDestinoSat];
+                if (polylineapunte) {
+                    polylineapunte.setLatLngs(latlngs);
+                } else {
+                    polylineapunte = L.polyline(latlngs, {
+                        color: '#06b6d4',
+                        weight: 3,
+                        dashArray: '6, 6',
+                        opacity: 0.8
+                    }).addTo(map);
+                }
             }
         }
 
-        // Ejecutar al cargar la ventana
-        window.onload = function() {
+        // Ejecutar al cargar la ventana de forma segura
+        window.addEventListener('DOMContentLoaded', () => {
             initMap();
-        };
+        });
     </script>
 </body>
 </html>
