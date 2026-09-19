@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet Omnivore (Para leer archivos KML/GeoJSON directamente) -->
+    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
     <style>
         #map { height: calc(100vh - 5rem); }
     </style>
@@ -25,7 +27,7 @@
             <p class="text-xs text-slate-400">Gestión de Fibra Óptica FTTH & Redes Bqto-Cabudare</p>
         </div>
         
-        <div class="flex items-center gap-3 mt-2 sm:mt-0">
+        <div class="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap">
             <!-- Selector de Modo -->
             <div class="bg-slate-700 p-1 rounded-lg flex items-center border border-slate-600">
                 <span class="text-xs text-slate-300 px-2 font-medium">Modo:</span>
@@ -35,12 +37,18 @@
                 </select>
             </div>
 
-            <!-- Botones de Respaldo -->
+            <!-- Botones de KML de My Maps -->
+            <label class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer" title="Sube el archivo .kml exportado de Google My Maps">
+                🌍 Importar KML My Maps
+                <input type="file" id="importKmlFile" class="hidden" accept=".kml,.kmz" onchange="importKmlMyMaps(event)">
+            </label>
+
+            <!-- Botones de Respaldo JSON -->
             <button onclick="exportData()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow">
                 💾 Exportar JSON
             </button>
             <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer">
-                📂 Importar
+                📂 Importar JSON
                 <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
             </label>
         </div>
@@ -66,7 +74,7 @@
 
                 <!-- Formulario Dinámico -->
                 <div id="formContainer" class="bg-slate-700/30 p-3 rounded-lg border border-slate-600/50 text-sm">
-                    <!-- Se llena dinámicamente con JS según la selección -->
+                    <!-- Se llena dinámicamente con JS -->
                 </div>
 
                 <div class="flex gap-2">
@@ -81,12 +89,12 @@
 
             <!-- Panel Informativo para el Modo Visual -->
             <div id="viewModeMessage" class="hidden bg-sky-900/30 border border-sky-600/40 p-3 rounded-lg text-xs text-sky-200">
-                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Puedes hacer clic en cualquier elemento del mapa para ver su nomenclatura, estado y conexiones sin riesgo de modificar la red.
+                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Puedes hacer clic en cualquier elemento del mapa para ver su nomenclatura, estado y conexiones.
             </div>
 
-            <!-- Filtros de Visualización (Siempre visibles) -->
+            <!-- Filtros de Visualización -->
             <div class="bg-slate-700/40 p-3 rounded-lg border border-slate-600 text-xs flex flex-col gap-2">
-                <span class="font-semibold text-slate-300">Filtros de Capas:</span>
+                <span class="font-semibold text-slate-300">Filtros de Capas Propias:</span>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" id="filterFdt" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Nodos FDT
                 </label>
@@ -116,15 +124,13 @@
 
     <!-- Script de la Aplicación -->
     <script>
-        // Coordenadas iniciales centradas en Barquisimeto / Cabudare
         const defaultLat = 10.0678;
         const defaultLng = -69.3473;
 
         let map = L.map('map').setView([defaultLat, defaultLng], 14);
 
-        // Capa satelital limpia (Esri World Imagery)
         let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS User Community',
             maxZoom: 19
         }).addTo(map);
 
@@ -132,7 +138,6 @@
         let selectedLng = null;
         let tempMarker = null;
 
-        // Estructura de datos almacenados
         let networkData = JSON.parse(localStorage.getItem('isp_inter_bqto_data')) || {
             fdts: [],
             naps: [],
@@ -141,9 +146,9 @@
         };
 
         let mapLayers = L.layerGroup().addTo(map);
-        let currentMode = 'edit'; // 'edit' o 'view'
+        let kmlImportLayer = L.layerGroup().addTo(map); // Capa específica para el KML de My Maps
+        let currentMode = 'edit';
 
-        // Cambiar dinámicamente entre Modo Edición y Modo Visual
         document.getElementById('appMode').addEventListener('change', function(e) {
             currentMode = e.target.value;
             const editControls = document.getElementById('editControlsContainer');
@@ -152,10 +157,7 @@
             if (currentMode === 'view') {
                 editControls.classList.add('hidden');
                 viewMsg.classList.remove('hidden');
-                if (tempMarker) {
-                    map.removeLayer(tempMarker);
-                    tempMarker = null;
-                }
+                if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
                 document.getElementById('selectedCoords').innerText = "Modo Solo Visualización activado.";
             } else {
                 editControls.classList.remove('hidden');
@@ -163,7 +165,6 @@
             }
         });
 
-        // Manejo de formularios dinámicos
         const elementTypeSelect = document.getElementById('elementType');
         elementTypeSelect.addEventListener('change', renderForm);
 
@@ -227,7 +228,7 @@
                 let houseOptions = networkData.houses.map(h => `<option value="${h.client} (M:${h.block} C:${h.houseNum})">${h.client} - M:${h.block}</option>`).join('');
                 
                 if(!napOptions || !houseOptions) {
-                    container.innerHTML = `<p class="text-amber-400 text-xs">⚠️ Debes registrar primero al menos una Caja NAP y una Casa para trazar el Drop.</p>`;
+                    container.innerHTML = `<p class="text-amber-400 text-xs">⚠️ Debes registrar una NAP y una Casa primero.</p>`;
                     return;
                 }
 
@@ -253,18 +254,13 @@
         }
         renderForm();
 
-        // Clic en el mapa para capturar coordenadas (Solo en modo edición)
         map.on('click', function(e) {
-            if (currentMode === 'view') return; // Bloqueado en visualización
-
+            if (currentMode === 'view') return;
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
-
             document.getElementById('selectedCoords').innerText = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
 
-            if (tempMarker) {
-                map.removeLayer(tempMarker);
-            }
+            if (tempMarker) map.removeLayer(tempMarker);
             tempMarker = L.marker([selectedLat, selectedLng], {
                 icon: L.divIcon({
                     className: 'custom-temp-marker',
@@ -273,21 +269,19 @@
             }).addTo(map);
         });
 
-        // Guardar Elemento
         function saveElement() {
             if (currentMode === 'view') return;
-
             const type = elementTypeSelect.value;
 
             if (type !== 'drop' && (!selectedLat || !selectedLng)) {
-                alert('¡Epa! Tienes que hacer clic en el mapa primero para ubicar el equipo.');
+                alert('¡Epa! Haz clic en el mapa primero.');
                 return;
             }
 
             if (type === 'fdt') {
                 const name = document.getElementById('fdtName').value.trim();
                 const feeder = document.getElementById('fdtFeeder').value.trim();
-                if(!name) { alert('Asigna un nombre al FDT'); return; }
+                if(!name) { alert('Falta el nombre del FDT'); return; }
                 networkData.fdts.push({ name, feeder, lat: selectedLat, lng: selectedLng });
             } 
             else if (type === 'nap') {
@@ -295,7 +289,7 @@
                 const block = document.getElementById('napBlock').value.trim();
                 const ports = document.getElementById('napPorts').value;
                 const fdt = document.getElementById('napFdt').value;
-                if(!name) { alert('Asigna un nombre a la NAP'); return; }
+                if(!name) { alert('Falta el nombre de la NAP'); return; }
                 networkData.naps.push({ name, block, ports, fdt, lat: selectedLat, lng: selectedLng });
             } 
             else if (type === 'house') {
@@ -303,7 +297,7 @@
                 const block = document.getElementById('houseBlock').value.trim();
                 const houseNum = document.getElementById('houseNumber').value.trim();
                 const status = document.getElementById('houseStatus').value;
-                if(!client) { alert('Escribe el nombre del cliente o inmueble'); return; }
+                if(!client) { alert('Falta el nombre del cliente'); return; }
                 networkData.houses.push({ client, block, houseNum, status, lat: selectedLat, lng: selectedLng });
             }
             else if (type === 'drop') {
@@ -312,14 +306,10 @@
                 const port = document.getElementById('dropPort').value.trim();
                 const meters = document.getElementById('dropMeters').value.trim();
                 
-                // Buscar coordenadas de la NAP y de la Casa para trazar línea
                 const napObj = networkData.naps.find(n => n.name === napName);
                 const houseObj = networkData.houses.find(h => `${h.client} (M:${h.block} C:${h.houseNum})` === houseName);
 
-                if(!napObj || !houseObj) {
-                    alert('Error localizando la NAP o la Casa seleccionada.');
-                    return;
-                }
+                if(!napObj || !houseObj) { alert('Error localizando NAP o Casa'); return; }
 
                 networkData.drops.push({
                     napName, houseName, port, meters,
@@ -328,120 +318,126 @@
                 });
             }
 
-            // Guardar en localStorage
             localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-            
-            // Limpiar marcador temporal y refrescar
-            if(tempMarker) {
-                map.removeLayer(tempMarker);
-                tempMarker = null;
-            }
-            selectedLat = null;
-            selectedLng = null;
-            document.getElementById('selectedCoords').innerText = "Guardado con éxito. Selecciona otro punto...";
-            
+            if(tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+            selectedLat = null; selectedLng = null;
+            document.getElementById('selectedCoords').innerText = "Guardado con éxito.";
             renderForm();
             updateLayers();
         }
 
-        // Renderizar todos los elementos en el mapa según filtros
         function updateLayers() {
             mapLayers.clearLayers();
-
             const showFdt = document.getElementById('filterFdt').checked;
             const showNap = document.getElementById('filterNap').checked;
             const showHouse = document.getElementById('filterHouse').checked;
             const showDrop = document.getElementById('filterDrop').checked;
 
-            // 1. Dibujar Drops (Líneas)
             if (showDrop) {
                 networkData.drops.forEach(drop => {
-                    let line = L.polyline([drop.from, drop.to], {
-                        color: '#a855f7',
-                        weight: 2,
-                        dashArray: '4, 4'
-                    }).bindPopup(`<b>Acometida Drop</b><br>NAP: ${drop.napName}<br>Puerto: ${drop.port || 'N/A'}<br>Cliente: ${drop.houseName}<br>Metraje: ${drop.meters || 'N/A'}`);
+                    let line = L.polyline([drop.from, drop.to], { color: '#a855f7', weight: 2, dashArray: '4, 4' })
+                        .bindPopup(`<b>Drop</b><br>NAP: ${drop.napName}<br>Cliente: ${drop.houseName}`);
                     mapLayers.addLayer(line);
                 });
             }
-
-            // 2. Dibujar FDTs
             if (showFdt) {
                 networkData.fdts.forEach(fdt => {
-                    let iconHtml = `<div style="background-color: #0284c7; color: white; padding: 5px; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);" title="FDT: ${fdt.name}">🗄️</div>`;
-                    let marker = L.marker([fdt.lat, fdt.lng], {
-                        icon: L.divIcon({ className: 'custom-fdt-icon', html: iconHtml, iconSize: [28, 28] })
-                    }).bindPopup(`<b>Nodo FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder || 'N/A'}`);
+                    let iconHtml = `<div style="background-color: #0284c7; color: white; padding: 5px; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white;">🗄️</div>`;
+                    let marker = L.marker([fdt.lat, fdt.lng], { icon: L.divIcon({ className: 'custom-fdt', html: iconHtml, iconSize: [28, 28] }) })
+                        .bindPopup(`<b>FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder}`);
                     mapLayers.addLayer(marker);
                 });
             }
-
-            // 3. Dibujar NAPs
             if (showNap) {
                 networkData.naps.forEach(nap => {
-                    let iconHtml = `<div style="background-color: #eab308; color: black; padding: 4px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">📦 ${nap.name}</div>`;
-                    let marker = L.marker([nap.lat, nap.lng], {
-                        icon: L.divIcon({ className: 'custom-nap-icon', html: iconHtml })
-                    }).bindPopup(`<b>Caja NAP: ${nap.name}</b><br>Manzana: ${nap.block}<br>Puertos: ${nap.ports}<br>FDT Padre: ${nap.fdt}`);
+                    let iconHtml = `<div style="background-color: #eab308; color: black; padding: 4px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid white;">📦 ${nap.name}</div>`;
+                    let marker = L.marker([nap.lat, nap.lng], { icon: L.divIcon({ className: 'custom-nap', html: iconHtml }) })
+                        .bindPopup(`<b>NAP: ${nap.name}</b><br>Manzana: ${nap.block}<br>FDT: ${nap.fdt}`);
                     mapLayers.addLayer(marker);
                 });
             }
-
-            // 4. Dibujar Casas / Clientes
             if (showHouse) {
                 networkData.houses.forEach(house => {
                     let color = house.status === 'Activo' ? '#22c55e' : (house.status === 'Disponible' ? '#3b82f6' : '#eab308');
-                    let iconHtml = `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.6);" title="${house.client}"></div>`;
-                    let marker = L.marker([house.lat, house.lng], {
-                        icon: L.divIcon({ className: 'custom-house-icon', html: iconHtml, iconSize: [12, 12] })
-                    }).bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block} | Casa: ${house.houseNum}<br>Estado: <span style="color:${color}; font-weight:bold;">${house.status}</span>`);
+                    let iconHtml = `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`;
+                    let marker = L.marker([house.lat, house.lng], { icon: L.divIcon({ className: 'custom-house', html: iconHtml, iconSize: [12, 12] }) })
+                        .bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block} | Casa: ${house.houseNum}<br>Estado: ${house.status}`);
                     mapLayers.addLayer(marker);
                 });
             }
         }
 
-        // Limpiar base de datos local
+        // Función para leer y pintar el KML de Google My Maps de golpe
+        function importKmlMyMaps(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const kmlText = e.target.result;
+                
+                // Limpiar capa KML anterior si existía
+                kmlImportLayer.clearLayers();
+
+                // Usar omnivore para parsear el KML y pintarlo en el mapa automáticamente
+                let runLayer = omnivore.kml.parse(kmlText);
+                
+                runLayer.eachLayer(function(layer) {
+                    // Estilizar automáticamente lo que traiga el My Maps
+                    if (layer.setStyle) {
+                        layer.setStyle({ color: '#38bdf8', weight: 3, opacity: 0.8 });
+                    }
+                    kmlImportLayer.addLayer(layer);
+                });
+
+                // Centrar el mapa en los datos importados si es posible
+                try {
+                    map.fitBounds(runLayer.getBounds());
+                } catch (err) {}
+
+                alert('¡KML de Google My Maps importado y visualizado con éxito!');
+            };
+            reader.readAsText(file);
+        }
+
         function clearMarkers() {
-            if(confirm('¿Seguro que quieres borrar toda la red registrada en este navegador?')) {
+            if(confirm('¿Borrar red registrada localmente?')) {
                 networkData = { fdts: [], naps: [], houses: [], drops: [] };
                 localStorage.removeItem('isp_inter_bqto_data');
                 updateLayers();
                 renderForm();
-                alert('Memoria limpia.');
+                alert('Limpio.');
             }
         }
 
-        // Exportar a JSON
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(networkData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "isp_inter_bqto_respaldo.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", "isp_inter_bqto_respaldo.json");
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
         }
 
-        // Importar de JSON
         function importData(event) {
-            const fileReader = new FileReader();
+            const fr = new FileReader();
             if(event.target.files[0]) {
-                fileReader.readAsText(event.target.files[0], "UTF-8");
-                fileReader.onload = function(e) {
+                fr.readAsText(event.target.files[0], "UTF-8");
+                fr.onload = function(e) {
                     try {
                         networkData = JSON.parse(e.target.result);
                         localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
                         updateLayers();
                         renderForm();
-                        alert('¡Respaldo importado con éxito!');
+                        alert('JSON importado!');
                     } catch (error) {
-                        alert('Error al leer el archivo JSON.');
+                        alert('Error en archivo JSON.');
                     }
                 };
             }
         }
 
-        // Carga inicial al abrir la página
         updateLayers();
     </script>
 </body>
