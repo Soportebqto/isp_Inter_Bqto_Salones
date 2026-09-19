@@ -1,443 +1,847 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISP Inter Bqto - Gestión FTTH</title>
-    <!-- Tailwind CSS CDN -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ISP NetMap Pro - Barquisimeto & Cabudare</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Leaflet Omnivore -->
-    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            950: '#020617',
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155'
+                        },
+                        brand: {
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            accent: '#f97316'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel/CSV handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        #map { height: calc(100vh - 5rem); }
+        body { font-family: 'Inter', sans-serif; }
+        .leaflet-container { width: 100%; height: 100%; background: #0f172a !important; }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+        }
+        .leaflet-container a.leaflet-popup-close-button { color: #94a3b8; }
+        /* Custom scrollbar for mobile drawers */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 flex flex-col h-screen overflow-hidden">
+<body class="bg-dark-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col">
 
-    <!-- Header -->
-    <header class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex flex-wrap justify-between items-center shadow-md">
-        <div>
-            <h1 class="text-xl font-bold text-sky-400 flex items-center gap-2">
-                📡 ISP Inter Bqto
-            </h1>
-            <p class="text-xs text-slate-400">Gestión de Fibra Óptica FTTH & Redes Bqto-Cabudare</p>
+    <!-- TOP HEADER -->
+    <header class="bg-dark-900 border-b border-dark-800 px-4 py-3 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-brand-600 to-brand-accent p-2.5 rounded-xl shadow-lg shadow-brand-600/20">
+                <i class="fa-solid fa-network-wired text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base md:text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-accent bg-clip-text text-transparent">ISP NetMap Pro</h1>
+                <p class="text-xs text-slate-400 hidden sm:block">FTTH Network Management • Barquisimeto & Cabudare</p>
+            </div>
         </div>
-        
-        <div class="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap">
-            <!-- Selector de Modo -->
-            <div class="bg-slate-700 p-1 rounded-lg flex items-center border border-slate-600">
-                <span class="text-xs text-slate-300 px-2 font-medium">Modo:</span>
-                <select id="appMode" class="bg-slate-800 text-sky-300 text-xs font-semibold px-2 py-1 rounded focus:outline-none">
-                    <option value="edit">🛠️ Edición (Completo)</option>
-                    <option value="view">👁️ Solo Visual (Técnicos)</option>
-                </select>
+
+        <!-- Cloud Status & Actions -->
+        <div class="flex items-center space-x-2 md:space-x-4">
+            <div id="cloudStatusBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span id="cloudStatusText">Sincronizado en la Nube</span>
             </div>
 
-            <!-- Botón KML My Maps -->
-            <label class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer" title="Sube el archivo .kml de Google My Maps">
-                🌍 Importar KML My Maps
-                <input type="file" id="importKmlFile" class="hidden" accept=".kml,.kmz" onchange="importKmlMyMaps(event)">
-            </label>
-
-            <!-- Botones de Respaldo JSON -->
-            <button onclick="exportData()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow">
-                💾 Exportar JSON
+            <button onclick="toggleModal('importModal')" class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-file-arrow-up"></i>
+                <span class="hidden sm:inline">Importación Masiva / KML</span>
             </button>
-            <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer">
-                📂 Importar JSON
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
-            </label>
+
+            <button onclick="toggleSidebarMobile()" class="md:hidden bg-dark-800 hover:bg-dark-700 text-slate-300 p-2 rounded-xl border border-dark-700">
+                <i class="fa-solid fa-bars-staggered"></i>
+            </button>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
+    <!-- TABS BAR FOR ENTITY CONTROL -->
+    <nav class="bg-dark-950 border-b border-dark-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto shrink-0 z-20">
+        <button onclick="switchTab('map')" id="tab-btn-map" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white transition flex items-center space-x-2 shrink-0">
+            <i class="fa-solid fa-map"></i>
+            <span>Mapa General</span>
+        </button>
+        <button onclick="switchTab('fdts')" id="tab-btn-fdts" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-dark-900 text-slate-400 hover:text-white hover:bg-dark-800 transition flex items-center space-x-2 shrink-0">
+            <i class="fa-solid fa-server text-blue-400"></i>
+            <span>FDTs & Feeders</span>
+            <span id="count-fdts" class="bg-dark-800 px-1.5 py-0.5 rounded-md text-[10px]">0</span>
+        </button>
+        <button onclick="switchTab('naps')" id="tab-btn-naps" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-dark-900 text-slate-400 hover:text-white hover:bg-dark-800 transition flex items-center space-x-2 shrink-0">
+            <i class="fa-solid fa-box text-amber-400"></i>
+            <span>NAPs</span>
+            <span id="count-naps" class="bg-dark-800 px-1.5 py-0.5 rounded-md text-[10px]">0</span>
+        </button>
+        <button onclick="switchTab('houses')" id="tab-btn-houses" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-dark-900 text-slate-400 hover:text-white hover:bg-dark-800 transition flex items-center space-x-2 shrink-0">
+            <i class="fa-solid fa-house-chimney text-emerald-400"></i>
+            <span>Manzanas / Casas</span>
+            <span id="count-houses" class="bg-dark-800 px-1.5 py-0.5 rounded-md text-[10px]">0</span>
+        </button>
+        <button onclick="switchTab('drops')" id="tab-btn-drops" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-dark-900 text-slate-400 hover:text-white hover:bg-dark-800 transition flex items-center space-x-2 shrink-0">
+            <i class="fa-solid fa-ethernet text-purple-400"></i>
+            <span>Drops (Acometidas)</span>
+            <span id="count-drops" class="bg-dark-800 px-1.5 py-0.5 rounded-md text-[10px]">0</span>
+        </button>
+    </nav>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="flex-1 relative flex overflow-hidden">
         
-        <!-- Sidebar / Panel de Control -->
-        <div id="sidebar" class="w-full lg:w-96 bg-slate-800 border-r border-slate-700 p-4 overflow-y-auto flex flex-col gap-4">
-            
-            <!-- Selector de Tipo de Registro -->
-            <div id="editControlsContainer" class="flex flex-col gap-4">
-                <div class="bg-slate-700/50 p-3 rounded-lg border border-slate-600">
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">¿Qué deseas registrar en el mapa?</label>
-                    <select id="elementType" class="w-full bg-slate-700 text-white text-sm rounded p-2 border border-slate-600 focus:outline-none focus:border-sky-400">
-                        <option value="fdt">Nodo FDT (Terminal de Distribución)</option>
-                        <option value="nap">Caja NAP (Distribución de Manzana)</option>
-                        <option value="house">Casa / Inmueble / Cliente</option>
-                        <option value="drop">Trazar Drop (Acometida a Casa)</option>
-                    </select>
+        <!-- MAP CONTAINER -->
+        <div id="map" class="flex-1 h-full z-10"></div>
+
+        <!-- FLOATING LAYER FILTERS PANEL (Desktop & Mobile Collapsible) -->
+        <aside id="filtersPanel" class="absolute top-4 right-4 z-20 w-72 bg-dark-900/95 backdrop-blur-md border border-dark-800 rounded-2xl shadow-2xl p-4 flex flex-col space-y-4 transition-all duration-300 transform translate-x-full md:translate-x-0">
+            <div class="flex items-center justify-between border-b border-dark-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-layer-group text-brand-500"></i>
+                    <h3 class="font-bold text-sm">Filtros de Capas</h3>
+                </div>
+                <button onclick="toggleSidebarMobile()" class="md:hidden text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Layer toggles -->
+            <div class="space-y-3 text-xs">
+                <label class="flex items-center justify-between p-2 rounded-xl hover:bg-dark-800 cursor-pointer transition">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-server text-blue-400 w-4"></i>
+                        <span>FDTs & Feeders</span>
+                    </div>
+                    <input type="checkbox" id="layer-fdts" checked onchange="updateLayers()" class="rounded bg-dark-950 border-dark-700 text-brand-600 focus:ring-0">
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-xl hover:bg-dark-800 cursor-pointer transition">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-box text-amber-400 w-4"></i>
+                        <span>NAPs (Cajas Terminales)</span>
+                    </div>
+                    <input type="checkbox" id="layer-naps" checked onchange="updateLayers()" class="rounded bg-dark-950 border-dark-700 text-brand-600 focus:ring-0">
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-xl hover:bg-dark-800 cursor-pointer transition">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-house-chimney text-emerald-400 w-4"></i>
+                        <span>Manzanas / Casas</span>
+                    </div>
+                    <input type="checkbox" id="layer-houses" checked onchange="updateLayers()" class="rounded bg-dark-950 border-dark-700 text-brand-600 focus:ring-0">
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-xl hover:bg-dark-800 cursor-pointer transition">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-ethernet text-purple-400 w-4"></i>
+                        <span>Drops (Acometidas)</span>
+                    </div>
+                    <input type="checkbox" id="layer-drops" checked onchange="updateLayers()" class="rounded bg-dark-950 border-dark-700 text-brand-600 focus:ring-0">
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-xl hover:bg-dark-800 cursor-pointer transition">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-route text-brand-accent w-4"></i>
+                        <span>Trazas KML / Polígonos</span>
+                    </div>
+                    <input type="checkbox" id="layer-kml" checked onchange="updateLayers()" class="rounded bg-dark-950 border-dark-700 text-brand-600 focus:ring-0">
+                </label>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-dark-950 p-3 rounded-xl border border-dark-800/60 space-y-1">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Zona Operativa</span>
+                <p class="text-xs font-bold text-slate-200">Barquisimeto - Cabudare</p>
+                <div class="pt-2 flex justify-between text-[11px] text-slate-400">
+                    <span>Total Elementos:</span>
+                    <span id="totalElementsCount" class="font-bold text-white">0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- TAB CONTENT OVERLAY (When clicking non-map tabs) -->
+        <div id="tabContentPanel" class="absolute inset-0 bg-dark-950/95 backdrop-blur-xl z-20 hidden flex flex-col p-4 md:p-8 overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-dark-800 mb-6 max-w-6xl mx-auto w-full">
+                <div class="flex items-center space-x-3">
+                    <div id="activeTabIcon" class="bg-brand-600/20 text-brand-500 p-3 rounded-2xl text-xl"></div>
+                    <div>
+                        <h2 id="activeTabTitle" class="text-xl font-bold">Gestión de Entidades</h2>
+                        <p class="text-xs text-slate-400">Administra, edita o elimina los elementos sincronizados</p>
+                    </div>
+                </div>
+                <button onclick="switchTab('map')" class="bg-dark-800 hover:bg-dark-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2">
+                    <i class="fa-solid fa-map"></i>
+                    <span>Volver al Mapa</span>
+                </button>
+            </div>
+
+            <div class="max-w-6xl mx-auto w-full flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <input type="text" id="tableSearch" onkeyup="filterTable()" placeholder="Buscar elemento por nombre, código o cliente..." class="bg-dark-900 border border-dark-800 rounded-xl px-4 py-2.5 text-xs w-full max-w-sm focus:outline-none focus:border-brand-500">
+                    <button onclick="openAddEntityModal()" class="ml-3 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md flex items-center space-x-1.5 shrink-0">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nuevo Elemento</span>
+                    </button>
                 </div>
 
-                <!-- Formulario Dinámico -->
-                <div id="formContainer" class="bg-slate-700/30 p-3 rounded-lg border border-slate-600/50 text-sm"></div>
-
-                <div class="flex gap-2">
-                    <button onclick="saveElement()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 px-4 rounded text-sm transition shadow">
-                        Registrar en Coordenada
-                    </button>
-                    <button onclick="clearMarkers()" class="bg-rose-600/80 hover:bg-rose-500 text-white text-xs py-2 px-3 rounded transition" title="Borrar todo localmente">
-                        🗑️ Limpiar
-                    </button>
+                <div class="bg-dark-900 border border-dark-800 rounded-2xl overflow-hidden shadow-xl flex-1 flex flex-col">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="bg-dark-800 text-slate-400 uppercase tracking-wider text-[10px] border-b border-dark-700">
+                                <tr>
+                                    <th class="p-3">Nombre / Identificador</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Coordenadas / Detalles</th>
+                                    <th class="p-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entityTableBody" class="divide-y divide-dark-800/60">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-
-            <!-- Panel Informativo Modo Visual -->
-            <div id="viewModeMessage" class="hidden bg-sky-900/30 border border-sky-600/40 p-3 rounded-lg text-xs text-sky-200">
-                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Haz clic en los elementos para ver su información.
-            </div>
-
-            <!-- Filtros de Visualización -->
-            <div class="bg-slate-700/40 p-3 rounded-lg border border-slate-600 text-xs flex flex-col gap-2">
-                <span class="font-semibold text-slate-300">Filtros de Capas:</span>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterFdt" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Nodos FDT</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterNap" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Cajas NAP</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterHouse" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Casas / Clientes</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterDrop" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Acometidas (Drops)</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterKml" checked onchange="toggleKmlLayer()" class="rounded bg-slate-900 border-slate-600 text-amber-500"> Ver Trazas KML Importadas</label>
-            </div>
-
-            <div class="bg-slate-900/60 p-2.5 rounded border border-slate-700 text-xs text-slate-400">
-                <span class="font-semibold text-slate-300">Punto seleccionado en mapa:</span>
-                <div id="selectedCoords" class="text-sky-400 font-mono mt-1">Haz clic en el mapa...</div>
-            </div>
-
         </div>
-
-        <!-- Mapa Container -->
-        <div id="map" class="flex-1 z-0"></div>
 
     </div>
 
-    <!-- Script de la Aplicación -->
-    <script>
-        const defaultLat = 10.0678;
-        const defaultLng = -69.3473;
+    <!-- IMPORT MODAL (KML & Bulk Paste) -->
+    <div id="importModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-dark-900 border border-dark-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-arrow-up text-brand-500"></i>
+                    <h3 class="font-bold text-sm">Importación Masiva & KML</h3>
+                </div>
+                <button onclick="toggleModal('importModal')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
 
-        let map = L.map('map').setView([defaultLat, defaultLng], 14);
+            <div class="p-6 space-y-6 overflow-y-auto flex-1">
+                <!-- Option A: KML Upload -->
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-300">1. Subir Archivo KML (Google My Maps)</label>
+                    <div class="border-2 border-dashed border-dark-700 hover:border-brand-500 rounded-2xl p-6 text-center transition cursor-pointer relative bg-dark-950/50">
+                        <input type="file" id="kmlFileInput" accept=".kml,.kmz" onchange="handleKMLUpload(event)" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <i class="fa-solid fa-map-location-dot text-3xl text-brand-500 mb-2"></i>
+                        <p class="text-xs font-medium text-slate-200">Haz clic o arrastra tu archivo KML aquí</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Soporta trazas, puntos, NAPs y polígonos de Barquisimeto-Cabudare</p>
+                    </div>
+                </div>
 
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, GIS User Community',
-            maxZoom: 19
-        }).addTo(map);
+                <hr class="border-dark-800">
 
-        let selectedLat = null;
-        let selectedLng = null;
-        let tempMarker = null;
+                <!-- Option B: Bulk Paste Excel / CSV -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-semibold text-slate-300">2. Importación Masiva Tabular (Pegar desde Excel / CSV)</label>
+                        <span class="text-[10px] text-slate-400">Formato: Manzana, Casa, Lat, Lng, Cliente</span>
+                    </div>
+                    <textarea id="bulkPasteInput" rows="5" placeholder="Ejemplo:&#10;Manzana 1, Casa 12, 10.0654, -69.3542, Juan Pérez&#10;Manzana 2, Casa 04, 10.0678, -69.3512, María Gómez" class="w-full bg-dark-950 border border-dark-800 rounded-xl p-3 text-xs font-mono focus:outline-none focus:border-brand-500"></textarea>
+                    <div class="flex justify-end">
+                        <button onclick="processBulkPaste()" class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md">
+                            Procesar Importación Masiva
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-        let networkData = JSON.parse(localStorage.getItem('isp_inter_bqto_data')) || {
-            fdts: [],
-            naps: [],
-            houses: [],
-            drops: [],
-            kmlItems: []
+            <div class="p-4 bg-dark-950 border-t border-dark-800 flex justify-end">
+                <button onclick="toggleModal('importModal')" class="bg-dark-800 hover:bg-dark-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-semibold">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT / RENAME MODAL -->
+    <div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-dark-900 border border-dark-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-dark-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-pen-to-square text-brand-500"></i>
+                    <h3 class="font-bold text-sm">Editar Elemento de Red</h3>
+                </div>
+                <button onclick="toggleModal('editModal')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="editEntityId">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-medium">Nombre / Identificador</label>
+                    <input type="text" id="editName" class="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-medium">Tipo de Entidad</label>
+                    <select id="editType" class="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500">
+                        <option value="fdt">FDT & Feeder</option>
+                        <option value="nap">NAP (Caja Terminal)</option>
+                        <option value="house">Manzana / Casa</option>
+                        <option value="drop">Drop (Acometida)</option>
+                        <option value="kml">Traza KML / Polígono</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-medium">Latitud</label>
+                        <input type="text" id="editLat" class="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-medium">Longitud</label>
+                        <input type="text" id="editLng" class="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono">
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-medium">Detalles / Cliente / Observaciones</label>
+                    <textarea id="editDetails" rows="3" class="w-full bg-dark-950 border border-dark-800 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500"></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 bg-dark-950 border-t border-dark-800 flex justify-between">
+                <button onclick="deleteCurrentEntity()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2 rounded-xl text-xs font-semibold">
+                    Eliminar
+                </button>
+                <div class="space-x-2">
+                    <button onclick="toggleModal('editModal')" class="bg-dark-800 hover:bg-dark-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-semibold">
+                        Cancelar
+                    </button>
+                    <button onclick="saveEntityChanges()" class="bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-xl text-xs font-semibold">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase handles exported to window
+        let db, auth, userId, appId;
+        let isCloudSynced = false;
+
+        window.initFirebaseApp = async function() {
+            try {
+                const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'isp-netmap-pro-default';
+
+                if (rawConfig) {
+                    const firebaseConfig = JSON.parse(rawConfig);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    isCloudSynced = true;
+                    
+                    document.getElementById('cloudStatusBadge').className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                    document.getElementById('cloudStatusText').innerText = "Sincronizado en la Nube";
+
+                    // Start real-time sync listener
+                    setupCloudListener();
+                } else {
+                    throw new Error("No config");
+                }
+            } catch (e) {
+                console.log("Running in Local Mode:", e);
+                isCloudSynced = false;
+                document.getElementById('cloudStatusBadge').className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20";
+                document.getElementById('cloudStatusText').innerText = "Modo Local (Offline)";
+                loadLocalData();
+            }
         };
 
-        let mapLayers = L.layerGroup().addTo(map);
-        let kmlImportLayer = L.layerGroup().addTo(map);
-        let currentMode = 'edit';
-
-        document.getElementById('appMode').addEventListener('change', function(e) {
-            currentMode = e.target.value;
-            const editControls = document.getElementById('editControlsContainer');
-            const viewMsg = document.getElementById('viewModeMessage');
-
-            if (currentMode === 'view') {
-                editControls.classList.add('hidden');
-                viewMsg.classList.remove('hidden');
-                if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
-                document.getElementById('selectedCoords').innerText = "Modo Solo Visualización activado.";
-            } else {
-                editControls.classList.remove('hidden');
-                viewMsg.classList.add('hidden');
-            }
-        });
-
-        const elementTypeSelect = document.getElementById('elementType');
-        elementTypeSelect.addEventListener('change', renderForm);
-
-        function renderForm() {
-            const type = elementTypeSelect.value;
-            const container = document.getElementById('formContainer');
-            
-            if (type === 'fdt') {
-                container.innerHTML = `
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Nomenclatura FDT:</label>
-                    <input type="text" id="fdtName" placeholder="Ej: FDT-ESTESTE-01" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Capacidad Hilos / Troncal:</label>
-                    <input type="text" id="fdtFeeder" placeholder="Ej: Feeder 48H" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
-                `;
-            } else if (type === 'nap') {
-                let fdtOptions = networkData.fdts.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
-                if(!fdtOptions) fdtOptions = `<option value="Principal">Principal</option>`;
-                container.innerHTML = `
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Código NAP:</label>
-                    <input type="text" id="napName" placeholder="Ej: NAP-M12-C04" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
-                    <div class="grid grid-cols-2 gap-2 mb-2">
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Manzana:</label><input type="text" id="napBlock" placeholder="Ej: M-12" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"></div>
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Puertos:</label><select id="napPorts" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"><option value="8">8</option><option value="16" selected>16</option></select></div>
-                    </div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">FDT Asociado:</label>
-                    <select id="napFdt" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">${fdtOptions}</select>
-                `;
-            } else if (type === 'house') {
-                container.innerHTML = `
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Cliente / Inmueble:</label>
-                    <input type="text" id="houseClient" placeholder="Ej: Edgar Salones" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
-                    <div class="grid grid-cols-2 gap-2 mb-2">
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Manzana:</label><input type="text" id="houseBlock" placeholder="Ej: 12" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"></div>
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Casa:</label><input type="text" id="houseNumber" placeholder="Ej: #45" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"></div>
-                    </div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Estado:</label>
-                    <select id="houseStatus" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
-                        <option value="Activo">🟢 Activo</option>
-                        <option value="Disponible">🔵 Disponible</option>
-                        <option value="Pendiente">🟡 Pendiente</option>
-                    </select>
-                `;
-            } else if (type === 'drop') {
-                let napOptions = networkData.naps.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
-                let houseOptions = networkData.houses.map(h => `<option value="${h.client} (M:${h.block} C:${h.houseNum})">${h.client}</option>`).join('');
-                
-                if(!napOptions || !houseOptions) {
-                    container.innerHTML = `<p class="text-amber-400 text-xs">⚠️ Registra una NAP y una Casa primero.</p>`;
-                    return;
+        function setupCloudListener() {
+            if (!db) return;
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'network_entities');
+            onSnapshot(colRef, (snapshot) => {
+                const cloudEntities = [];
+                snapshot.forEach(docSnap => {
+                    cloudEntities.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                if (cloudEntities.length > 0) {
+                    window.entities = cloudEntities;
+                } else {
+                    // Seed initial demo data for Barquisimeto-Cabudare if empty
+                    seedDefaultData();
                 }
-                container.innerHTML = `
-                    <label class="block text-xs font-medium text-slate-300 mb-1">NAP Origen:</label>
-                    <select id="dropNap" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">${napOptions}</select>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Casa Destino:</label>
-                    <select id="dropHouse" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">${houseOptions}</select>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Puerto:</label><input type="text" id="dropPort" placeholder="Ej: P-04" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"></div>
-                        <div><label class="block text-xs font-medium text-slate-300 mb-1">Metraje:</label><input type="text" id="dropMeters" placeholder="Ej: 120m" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600"></div>
-                    </div>
-                `;
-            }
-        }
-        renderForm();
-
-        map.on('click', function(e) {
-            if (currentMode === 'view') return;
-            selectedLat = e.latlng.lat;
-            selectedLng = e.latlng.lng;
-            document.getElementById('selectedCoords').innerText = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
-            if (tempMarker) map.removeLayer(tempMarker);
-            tempMarker = L.marker([selectedLat, selectedLng], {
-                icon: L.divIcon({ className: 'temp', html: '<div style="background:#38bdf8; width:14px; height:14px; border-radius:50%; border:2px solid white;"></div>' })
-            }).addTo(map);
-        });
-
-        function saveElement() {
-            if (currentMode === 'view') return;
-            const type = elementTypeSelect.value;
-            if (type !== 'drop' && (!selectedLat || !selectedLng)) { alert('Haz clic en el mapa primero.'); return; }
-
-            if (type === 'fdt') {
-                const name = document.getElementById('fdtName').value.trim();
-                const feeder = document.getElementById('fdtFeeder').value.trim();
-                if(!name) { alert('Falta nombre'); return; }
-                networkData.fdts.push({ name, feeder, lat: selectedLat, lng: selectedLng });
-            } else if (type === 'nap') {
-                const name = document.getElementById('napName').value.trim();
-                const block = document.getElementById('napBlock').value.trim();
-                const ports = document.getElementById('napPorts').value;
-                const fdt = document.getElementById('napFdt').value;
-                if(!name) { alert('Falta nombre'); return; }
-                networkData.naps.push({ name, block, ports, fdt, lat: selectedLat, lng: selectedLng });
-            } else if (type === 'house') {
-                const client = document.getElementById('houseClient').value.trim();
-                const block = document.getElementById('houseBlock').value.trim();
-                const houseNum = document.getElementById('houseNumber').value.trim();
-                const status = document.getElementById('houseStatus').value;
-                if(!client) { alert('Falta cliente'); return; }
-                networkData.houses.push({ client, block, houseNum, status, lat: selectedLat, lng: selectedLng });
-            } else if (type === 'drop') {
-                const napName = document.getElementById('dropNap').value;
-                const houseName = document.getElementById('dropHouse').value;
-                const port = document.getElementById('dropPort').value.trim();
-                const meters = document.getElementById('dropMeters').value.trim();
-                const napObj = networkData.naps.find(n => n.name === napName);
-                const houseObj = networkData.houses.find(h => `${h.client} (M:${h.block} C:${h.houseNum})` === houseName);
-                if(!napObj || !houseObj) { alert('Error buscando NAP o Casa'); return; }
-                networkData.drops.push({ napName, houseName, port, meters, from: [napObj.lat, napObj.lng], to: [houseObj.lat, houseObj.lng] });
-            }
-
-            localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-            if(tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
-            selectedLat = null; selectedLng = null;
-            document.getElementById('selectedCoords').innerText = "Guardado con éxito.";
-            renderForm();
-            updateLayers();
-        }
-
-        function updateLayers() {
-            mapLayers.clearLayers();
-            const showFdt = document.getElementById('filterFdt').checked;
-            const showNap = document.getElementById('filterNap').checked;
-            const showHouse = document.getElementById('filterHouse').checked;
-            const showDrop = document.getElementById('filterDrop').checked;
-
-            if (showDrop) {
-                networkData.drops.forEach(drop => {
-                    L.polyline([drop.from, drop.to], { color: '#a855f7', weight: 2, dashArray: '4, 4' })
-                        .bindPopup(`<b>Drop</b><br>NAP: ${drop.napName}<br>Cliente: ${drop.houseName}`).addTo(mapLayers);
-                });
-            }
-            if (showFdt) {
-                networkData.fdts.forEach(fdt => {
-                    let html = `<div style="background:#0284c7; color:white; padding:5px; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;">🗄️</div>`;
-                    L.marker([fdt.lat, fdt.lng], { icon: L.divIcon({ className: 'fdt', html, iconSize: [28,28] }) })
-                        .bindPopup(`<b>FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder}`).addTo(mapLayers);
-                });
-            }
-            if (showNap) {
-                networkData.naps.forEach(nap => {
-                    let html = `<div style="background:#eab308; color:black; padding:4px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid white;">📦 ${nap.name}</div>`;
-                    L.marker([nap.lat, nap.lng], { icon: L.divIcon({ className: 'nap', html }) })
-                        .bindPopup(`<b>NAP: ${nap.name}</b><br>Manzana: ${nap.block}<br>FDT: ${nap.fdt}`).addTo(mapLayers);
-                });
-            }
-            if (showHouse) {
-                networkData.houses.forEach(house => {
-                    let color = house.status === 'Activo' ? '#22c55e' : (house.status === 'Disponible' ? '#3b82f6' : '#eab308');
-                    let html = `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>`;
-                    L.marker([house.lat, house.lng], { icon: L.divIcon({ className: 'house', html, iconSize: [12,12] }) })
-                        .bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block} | Casa: ${house.houseNum}<br>Estado: ${house.status}`).addTo(mapLayers);
-                });
-            }
-
-            renderKmlItems();
-        }
-
-        // Renderizar elementos KML interactivos y editables
-        function renderKmlItems() {
-            kmlImportLayer.clearLayers();
-            if(!document.getElementById('filterKml').checked) return;
-
-            networkData.kmlItems.forEach((item, index) => {
-                let layer;
-                if(item.type === 'point') {
-                    let html = `<div style="background:#f59e0b; color:black; padding:4px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid white;">📍 ${item.name}</div>`;
-                    layer = L.marker(item.coords, { icon: L.divIcon({ className: 'kml-pt', html }) });
-                } else if(item.type === 'polyline') {
-                    layer = L.polyline(item.coords, { color: '#f59e0b', weight: 3, opacity: 0.8 });
-                } else if(item.type === 'polygon') {
-                    layer = L.polygon(item.coords, { color: '#f59e0b', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.2 });
-                }
-
-                if(layer) {
-                    layer.bindPopup(`
-                        <div style="font-family: sans-serif; font-size: 12px;">
-                            <b>Traza KML:</b> <span id="lbl-${index}">${item.name}</span><br><br>
-                            <div id="edit-box-${index}">
-                                <input type="text" id="inp-${index}" value="${item.name}" class="bg-slate-700 text-white p-1 rounded border border-slate-600 text-xs mb-1" style="width:130px;">
-                                <button onclick="renameKmlItem(${index})" class="bg-sky-600 text-white px-2 py-0.5 rounded text-xs">Renombrar</button>
-                            </div>
-                        </div>
-                    `);
-                    kmlImportLayer.addLayer(layer);
-                }
+                refreshApp();
+            }, (error) => {
+                console.error("Firestore error:", error);
             });
         }
 
-        // Renombrar elemento KML
-        window.renameKmlItem = function(index) {
-            const newVal = document.getElementById(`inp-${index}`).value.trim();
-            if(newVal) {
-                networkData.kmlItems[index].name = newVal;
-                localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-                updateLayers();
-                alert('¡Nombre actualizado con éxito!');
+        window.saveEntityToCloudOrLocal = async function(entity) {
+            if (isCloudSynced && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'network_entities', entity.id);
+                    await setDoc(docRef, entity);
+                } catch (e) {
+                    console.error("Error saving to cloud:", e);
+                }
+            } else {
+                const idx = window.entities.findIndex(e => e.id === entity.id);
+                if (idx >= 0) window.entities[idx] = entity;
+                else window.entities.push(entity);
+                localStorage.setItem('isp_netmap_entities', JSON.stringify(window.entities));
+                refreshApp();
             }
         };
 
-        // Importar y convertir KML de My Maps a objetos editables
-        function importKmlMyMaps(event) {
+        window.deleteEntityFromCloudOrLocal = async function(id) {
+            if (isCloudSynced && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'network_entities', id);
+                    await deleteDoc(docRef);
+                } catch (e) {
+                    console.error("Error deleting from cloud:", e);
+                }
+            } else {
+                window.entities = window.entities.filter(e => e.id !== id);
+                localStorage.setItem('isp_netmap_entities', JSON.stringify(window.entities));
+                refreshApp();
+            }
+        };
+
+        function loadLocalData() {
+            const saved = localStorage.getItem('isp_netmap_entities');
+            if (saved) {
+                window.entities = JSON.parse(saved);
+            } else {
+                seedDefaultData();
+            }
+            refreshApp();
+        }
+
+        function seedDefaultData() {
+            window.entities = [
+                { id: 'fdt-1', name: 'FDT Centro Barquisimeto', type: 'fdt', lat: 10.0678, lng: -69.3473, details: 'Feeder principal 144H - Zona Este' },
+                { id: 'fdt-2', name: 'FDT Cabudare Sur', type: 'fdt', lat: 10.0345, lng: -69.2789, details: 'Feeder principal 96H - Valle Hondo' },
+                { id: 'nap-1', name: 'NAP-CTR-01', type: 'nap', lat: 10.0692, lng: -69.3451, details: 'Capacidad 1/16 - Av. Venezuela con 24' },
+                { id: 'nap-2', name: 'NAP-VHO-04', type: 'nap', lat: 10.0312, lng: -69.2810, details: 'Capacidad 8/16 - Urb. Los Rastrojos' },
+                { id: 'house-1', name: 'Manzana 4 - Casa 12', type: 'house', lat: 10.0701, lng: -69.3440, details: 'Cliente: Carlos Mendoza (Plan 300Mbps)' },
+                { id: 'house-2', name: 'Valle Hondo - Mz B', type: 'house', lat: 10.0298, lng: -69.2834, details: 'Cliente: Ana Rodríguez (Plan 500Mbps)' },
+                { id: 'drop-1', name: 'Drop Acometida Mz4-12', type: 'drop', lat: 10.0698, lng: -69.3445, details: 'Fibra Monomodo G.657A2 - 85m' }
+            ];
+            if (!isCloudSynced) {
+                localStorage.setItem('isp_netmap_entities', JSON.stringify(window.entities));
+            } else {
+                window.entities.forEach(ent => window.saveEntityToCloudOrLocal(ent));
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            window.initFirebaseApp();
+        });
+    </script>
+
+    <script>
+        // Global State
+        window.entities = [];
+        let map, mapLayers = { fdts: null, naps: null, houses: null, drops: null, kml: null };
+        let currentActiveTab = 'map';
+
+        // Initialize Leaflet Map centered on Barquisimeto / Cabudare
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([10.0522, -69.3250], 13);
+            
+            // Dark tile layer (CartoDB Dark Matter)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Add zoom control to top-left
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+
+            // Initialize Layer Groups
+            mapLayers.fdts = L.layerGroup().addTo(map);
+            mapLayers.naps = L.layerGroup().addTo(map);
+            mapLayers.houses = L.layerGroup().addTo(map);
+            mapLayers.drops = L.layerGroup().addTo(map);
+            mapLayers.kml = L.layerGroup().addTo(map);
+
+            renderMapEntities();
+        }
+
+        function refreshApp() {
+            if (!map) initMap();
+            else renderMapEntities();
+            updateCounts();
+            if (currentActiveTab !== 'map') {
+                renderTableData();
+            }
+        }
+
+        function renderMapEntities() {
+            Object.keys(mapLayers).forEach(k => mapLayers[k].clearLayers());
+
+            let totalCount = window.entities.length;
+            document.getElementById('totalElementsCount').innerText = totalCount;
+
+            window.entities.forEach(ent => {
+                let marker;
+                let lat = parseFloat(ent.lat);
+                let lng = parseFloat(ent.lng);
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                if (ent.type === 'fdt') {
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div class="bg-blue-600 text-white p-2 rounded-xl shadow-lg border-2 border-blue-400 flex items-center justify-center w-8 h-8"><i class="fa-solid fa-server text-xs"></i></div>`,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+                    marker = L.marker([lat, lng], { icon }).bindPopup(createPopupHtml(ent));
+                    mapLayers.fdts.addLayer(marker);
+                } else if (ent.type === 'nap') {
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div class="bg-amber-500 text-white p-2 rounded-xl shadow-lg border-2 border-amber-300 flex items-center justify-center w-8 h-8"><i class="fa-solid fa-box text-xs"></i></div>`,
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+                    marker = L.marker([lat, lng], { icon }).bindPopup(createPopupHtml(ent));
+                    mapLayers.naps.addLayer(marker);
+                } else if (ent.type === 'house') {
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div class="bg-emerald-600 text-white p-2 rounded-xl shadow-lg border-2 border-emerald-400 flex items-center justify-center w-7 h-7"><i class="fa-solid fa-house-chimney text-[10px]"></i></div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+                    marker = L.marker([lat, lng], { icon }).bindPopup(createPopupHtml(ent));
+                    mapLayers.houses.addLayer(marker);
+                } else if (ent.type === 'drop') {
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div class="bg-purple-600 text-white p-1.5 rounded-lg shadow-lg border border-purple-400 flex items-center justify-center w-6 h-6"><i class="fa-solid fa-ethernet text-[10px]"></i></div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+                    marker = L.marker([lat, lng], { icon }).bindPopup(createPopupHtml(ent));
+                    mapLayers.drops.addLayer(marker);
+                } else if (ent.type === 'kml') {
+                    if (ent.latLngs && Array.isArray(ent.latLngs)) {
+                        marker = L.polyline(ent.latLngs, { color: '#f97316', weight: 4, opacity: 0.8 }).bindPopup(createPopupHtml(ent));
+                    } else {
+                        const icon = L.divIcon({
+                            className: 'custom-marker',
+                            html: `<div class="bg-orange-500 text-white p-2 rounded-xl shadow-lg border border-orange-300 flex items-center justify-center w-8 h-8"><i class="fa-solid fa-route text-xs"></i></div>`,
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        });
+                        marker = L.marker([lat, lng], { icon }).bindPopup(createPopupHtml(ent));
+                    }
+                    mapLayers.kml.addLayer(marker);
+                }
+            });
+
+            updateLayers();
+        }
+
+        function createPopupHtml(ent) {
+            return `
+                <div class="p-2 space-y-2 min-w-[200px]">
+                    <div class="flex items-center justify-between border-b border-dark-700 pb-1.5">
+                        <span class="font-bold text-sm text-white">${ent.name}</span>
+                        <span class="text-[10px] uppercase px-2 py-0.5 rounded-md bg-dark-800 text-brand-500 font-semibold">${ent.type}</span>
+                    </div>
+                    <p class="text-xs text-slate-300">${ent.details || 'Sin observaciones'}</p>
+                    <div class="pt-2 flex justify-end space-x-2">
+                        <button onclick="openEditModal('${ent.id}')" class="bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1">
+                            <i class="fa-solid fa-pen"></i>
+                            <span>Editar / Renombrar</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateLayers() {
+            const showFdts = document.getElementById('layer-fdts').checked;
+            const showNaps = document.getElementById('layer-naps').checked;
+            const showHouses = document.getElementById('layer-houses').checked;
+            const showDrops = document.getElementById('layer-drops').checked;
+            const showKml = document.getElementById('layer-kml').checked;
+
+            if (showFdts) map.addLayer(mapLayers.fdts); else map.removeLayer(mapLayers.fdts);
+            if (showNaps) map.addLayer(mapLayers.naps); else map.removeLayer(mapLayers.naps);
+            if (showHouses) map.addLayer(mapLayers.houses); else map.removeLayer(mapLayers.houses);
+            if (showDrops) map.addLayer(mapLayers.drops); else map.removeLayer(mapLayers.drops);
+            if (showKml) map.addLayer(mapLayers.kml); else map.removeLayer(mapLayers.kml);
+        }
+
+        function updateCounts() {
+            const counts = { fdt: 0, nap: 0, house: 0, drop: 0 };
+            window.entities.forEach(e => {
+                if (counts[e.type] !== undefined) counts[e.type]++;
+            });
+            document.getElementById('count-fdts').innerText = counts.fdt;
+            document.getElementById('count-naps').innerText = counts.nap;
+            document.getElementById('count-houses').innerText = counts.house;
+            document.getElementById('count-drops').innerText = counts.drop;
+        }
+
+        // Navigation Tabs Control
+        function switchTab(tabName) {
+            currentActiveTab = tabName;
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => {
+                btn.className = "tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-dark-900 text-slate-400 hover:text-white hover:bg-dark-800 transition flex items-center space-x-2 shrink-0";
+            });
+
+            if (tabName === 'map') {
+                document.getElementById('tab-btn-map').className = "tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white transition flex items-center space-x-2 shrink-0";
+                document.getElementById('tabContentPanel').classList.add('hidden');
+            } else {
+                document.getElementById(`tab-btn-${tabName}`).className = "tab-btn px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white transition flex items-center space-x-2 shrink-0";
+                document.getElementById('tabContentPanel').classList.remove('hidden');
+                
+                const titles = { fdts: 'FDTs & Feeders', naps: 'Cajas NAP', houses: 'Manzanas y Casas', drops: 'Drops (Acometidas)' };
+                const icons = { fdts: 'fa-server', naps: 'fa-box', houses: 'fa-house-chimney', drops: 'fa-ethernet' };
+                
+                document.getElementById('activeTabTitle').innerText = titles[tabName];
+                document.getElementById('activeTabIcon').innerHTML = `<i class="fa-solid ${icons[tabName]}"></i>`;
+                renderTableData(tabName);
+            }
+        }
+
+        function renderTableData(filterType = currentActiveTab) {
+            const tbody = document.getElementById('entityTableBody');
+            tbody.innerHTML = '';
+
+            let filtered = window.entities;
+            if (filterType === 'fdts') filtered = window.entities.filter(e => e.type === 'fdt');
+            if (filterType === 'naps') filtered = window.entities.filter(e => e.type === 'nap');
+            if (filterType === 'houses') filtered = window.entities.filter(e => e.type === 'house');
+            if (filterType === 'drops') filtered = window.entities.filter(e => e.type === 'drop');
+
+            const searchTerm = document.getElementById('tableSearch')?.value.toLowerCase() || '';
+            if (searchTerm) {
+                filtered = filtered.filter(e => e.name.toLowerCase().includes(searchTerm) || (e.details && e.details.toLowerCase().includes(searchTerm)));
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">No se encontraron elementos registrados</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(ent => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-dark-800/50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-white flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+                        <span>${ent.name}</span>
+                    </td>
+                    <td class="p-3 uppercase text-[10px] text-slate-400 font-semibold">${ent.type}</td>
+                    <td class="p-3 text-slate-300 font-mono text-[11px]">${ent.lat}, ${ent.lng} <br><span class="text-slate-500 font-sans">${ent.details || ''}</span></td>
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="focusOnMap('${ent.lat}', '${ent.lng}')" class="bg-dark-800 hover:bg-dark-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs" title="Ver en mapa">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </button>
+                        <button onclick="openEditModal('${ent.id}')" class="bg-brand-600/20 hover:bg-brand-600/30 text-brand-400 px-2.5 py-1.5 rounded-lg text-xs" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            renderTableData(currentActiveTab);
+        }
+
+        function focusOnMap(lat, lng) {
+            switchTab('map');
+            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                map.setView([parseFloat(lat), parseFloat(lng)], 17);
+            }
+        }
+
+        // Modals management
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleSidebarMobile() {
+            const panel = document.getElementById('filtersPanel');
+            panel.classList.toggle('translate-x-full');
+        }
+
+        function openEditModal(id) {
+            const ent = window.entities.find(e => e.id === id);
+            if (!ent) return;
+            document.getElementById('editEntityId').value = ent.id;
+            document.getElementById('editName').value = ent.name;
+            document.getElementById('editType').value = ent.type;
+            document.getElementById('editLat').value = ent.lat;
+            document.getElementById('editLng').value = ent.lng;
+            document.getElementById('editDetails').value = ent.details || '';
+            toggleModal('editModal');
+        }
+
+        function openAddEntityModal() {
+            document.getElementById('editEntityId').value = '';
+            document.getElementById('editName').value = '';
+            document.getElementById('editType').value = currentActiveTab === 'map' ? 'house' : (currentActiveTab === 'fdts' ? 'fdt' : currentActiveTab === 'naps' ? 'nap' : currentActiveTab === 'houses' ? 'house' : 'drop');
+            document.getElementById('editLat').value = '10.0650';
+            document.getElementById('editLng').value = '-69.3200';
+            document.getElementById('editDetails').value = '';
+            toggleModal('editModal');
+        }
+
+        async function saveEntityChanges() {
+            const id = document.getElementById('editEntityId').value || 'ent-' + Date.now();
+            const name = document.getElementById('editName').value || 'Sin nombre';
+            const type = document.getElementById('editType').value;
+            const lat = parseFloat(document.getElementById('editLat').value);
+            const lng = parseFloat(document.getElementById('editLng').value);
+            const details = document.getElementById('editDetails').value;
+
+            const newEnt = { id, name, type, lat, lng, details };
+            await window.saveEntityToCloudOrLocal(newEnt);
+            toggleModal('editModal');
+        }
+
+        async function deleteCurrentEntity() {
+            const id = document.getElementById('editEntityId').value;
+            if (!id) return;
+            if (confirm('¿Estás seguro de eliminar este elemento?')) {
+                await window.deleteEntityFromCloudOrLocal(id);
+                toggleModal('editModal');
+            }
+        }
+
+        // Bulk Paste Processing (Excel / Google Sheets tabular data)
+        async function processBulkPaste() {
+            const text = document.getElementById('bulkPasteInput').value.trim();
+            if (!text) return;
+
+            const lines = text.split('\n');
+            let addedCount = 0;
+
+            for (let line of lines) {
+                // Support comma or tab separated
+                const parts = line.split(/[\t,]+/).map(p => p.trim());
+                if (parts.length >= 4) {
+                    // Format: Manzana, Casa, Lat, Lng, Cliente
+                    const name = `${parts[0]} - ${parts[1]}`;
+                    const lat = parseFloat(parts[2]);
+                    const lng = parseFloat(parts[3]);
+                    const details = parts[4] ? `Cliente: ${parts[4]}` : 'Importado masivamente';
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const ent = {
+                            id: 'bulk-' + Math.random().toString(36.substring(2, 9)),
+                            name: name,
+                            type: 'house',
+                            lat: lat,
+                            lng: lng,
+                            details: details
+                        };
+                        await window.saveEntityToCloudOrLocal(ent);
+                        addedCount++;
+                    }
+                }
+            }
+
+            alert(`¡Importación completada! Se agregaron ${addedCount} casas/puntos exitosamente.`);
+            document.getElementById('bulkPasteInput').value = '';
+            toggleModal('importModal');
+        }
+
+        // KML Parser
+        function handleKMLUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const kmlText = e.target.result;
-                let parsedLayer = omnivore.kml.parse(kmlText);
+            reader.onload = async function(e) {
+                const parser = new DOMParser();
+                const kmlDoc = parser.parseFromString(e.target.result, 'text/xml');
                 
-                let addedCount = 0;
-                parsedLayer.eachLayer(function(layer) {
-                    let name = layer.feature && layer.feature.properties && layer.feature.properties.name ? layer.feature.properties.name : `Elemento KML ${networkData.kmlItems.length + 1}`;
-                    
-                    if(layer instanceof L.Marker) {
-                        let latlng = layer.getLatLng();
-                        networkData.kmlItems.push({ type: 'point', name: name, coords: [latlng.lat, latlng.lng] });
-                        addedCount++;
-                    } else if(layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-                        let latlngs = layer.getLatLngs().map(ll => [ll.lat, ll.lng]);
-                        networkData.kmlItems.push({ type: 'polyline', name: name, coords: latlngs });
-                        addedCount++;
-                    } else if(layer instanceof L.Polygon) {
-                        let latlngs = layer.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
-                        networkData.kmlItems.push({ type: 'polygon', name: name, coords: latlngs });
-                        addedCount++;
-                    }
-                });
+                const placemarks = kmlDoc.getElementsByTagName('Placemark');
+                let imported = 0;
 
-                localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-                updateLayers();
-                alert(`¡Se importaron y convirtieron ${addedCount} elementos del KML con éxito! Ahora puedes hacerles clic y renombrarlos.`);
+                for (let pm of placemarks) {
+                    const name = pm.getElementsByTagName('name')[0]?.textContent || 'Traza / Punto KML';
+                    const desc = pm.getElementsByTagName('description')[0]?.textContent || 'Importado de KML';
+                    
+                    // Check for Point
+                    const coordsNode = pm.getElementsByTagName('coordinates')[0];
+                    if (coordsNode) {
+                        const coordsText = coordsNode.textContent.trim();
+                        const firstCoordTuple = coordsText.split(/\s+/)[0];
+                        const parts = firstCoordTuple.split(',');
+                        if (parts.length >= 2) {
+                            const lng = parseFloat(parts[0]);
+                            const lat = parseFloat(parts[1]);
+
+                            const ent = {
+                                id: 'kml-' + Math.random().toString(36).substring(2, 9),
+                                name: name,
+                                type: 'kml',
+                                lat: lat,
+                                lng: lng,
+                                details: desc
+                            };
+                            await window.saveEntityToCloudOrLocal(ent);
+                            imported++;
+                        }
+                    }
+                }
+
+                alert(`Archivo KML procesado correctamente. Se importaron ${imported} elementos.`);
+                toggleModal('importModal');
             };
             reader.readAsText(file);
         }
-
-        function toggleKmlLayer() {
-            if(document.getElementById('filterKml').checked) {
-                map.addLayer(kmlImportLayer);
-            } else {
-                map.removeLayer(kmlImportLayer);
-            }
-        }
-
-        function clearMarkers() {
-            if(confirm('¿Borrar todo el registro guardado?')) {
-                networkData = { fdts: [], naps: [], houses: [], drops: [], kmlItems: [] };
-                localStorage.removeItem('isp_inter_bqto_data');
-                updateLayers();
-                renderForm();
-                alert('Limpieza completa.');
-            }
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(networkData, null, 2));
-            const dl = document.createElement('a');
-            dl.setAttribute("href", dataStr);
-            dl.setAttribute("download", "isp_inter_bqto_respaldo.json");
-            document.body.appendChild(dl);
-            dl.click();
-            dl.remove();
-        }
-
-        function importData(event) {
-            const fr = new FileReader();
-            if(event.target.files[0]) {
-                fr.readAsText(event.target.files[0], "UTF-8");
-                fr.onload = function(e) {
-                    try {
-                        networkData = JSON.parse(e.target.result);
-                        localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-                        updateLayers();
-                        renderForm();
-                        alert('Respaldo JSON cargado!');
-                    } catch (error) {
-                        alert('Error leyendo JSON.');
-                    }
-                };
-            }
-        }
-
-        updateLayers();
     </script>
+
 </body>
 </html>
