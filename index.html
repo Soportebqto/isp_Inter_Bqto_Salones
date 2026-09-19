@@ -1,841 +1,448 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISP Network & Infrastructure Manager</title>
-    <!-- Tailwind CSS for modern styling -->
+    <title>ISP Inter Bqto - Gestión FTTH</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        darkbg: '#0f172a',
-                        cardbg: '#1e293b',
-                        accent: '#3b82f6',
-                        accenthover: '#2563eb'
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Leaflet CSS for maps -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- FontAwesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .custom-popup .leaflet-popup-content-wrapper {
-            background: #1e293b;
-            color: #f8fafc;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-        }
-        .custom-popup .leaflet-popup-tip {
-            background: #1e293b;
-        }
-        /* Custom scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        #map { height: calc(100vh - 5rem); }
     </style>
 </head>
-<body class="h-full bg-darkbg text-slate-100 flex flex-col overflow-hidden">
+<body class="bg-slate-900 text-slate-100 flex flex-col h-screen overflow-hidden">
 
-    <header class="bg-cardbg border-b border-slate-800 h-16 flex items-center justify-between px-6 shrink-0 z-20">
-        <div class="flex items-center space-x-3">
-            <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-500/30">
-                <i class="fa-solid fa-network-wired text-lg"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-lg tracking-tight">ISP NetMap Pro</h1>
-                <p class="text-xs text-slate-400">Gestión de Fibra Óptica FTTH & Redes Planta Externa</p>
-            </div>
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex flex-wrap justify-between items-center shadow-md">
+        <div>
+            <h1 class="text-xl font-bold text-sky-400 flex items-center gap-2">
+                📡 ISP Inter Bqto
+            </h1>
+            <p class="text-xs text-slate-400">Gestión de Fibra Óptica FTTH & Redes Bqto-Cabudare</p>
         </div>
-        <div class="flex items-center space-x-4">
-            <div class="hidden md:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Modo Local Storage Activo</span>
+        
+        <div class="flex items-center gap-3 mt-2 sm:mt-0">
+            <!-- Selector de Modo -->
+            <div class="bg-slate-700 p-1 rounded-lg flex items-center border border-slate-600">
+                <span class="text-xs text-slate-300 px-2 font-medium">Modo:</span>
+                <select id="appMode" class="bg-slate-800 text-sky-300 text-xs font-semibold px-2 py-1 rounded focus:outline-none">
+                    <option value="edit">🛠️ Edición (Completo)</option>
+                    <option value="view">👁️ Solo Visual (Técnicos)</option>
+                </select>
             </div>
-            <button onclick="app.exportData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition flex items-center space-x-1.5">
-                <i class="fa-solid fa-download"></i>
-                <span>Exportar JSON</span>
+
+            <!-- Botones de Respaldo -->
+            <button onclick="exportData()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow">
+                💾 Exportar JSON
             </button>
-            <button onclick="app.clearAllData()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-500/30 transition flex items-center space-x-1.5">
-                <i class="fa-solid fa-trash-can"></i>
-                <span>Limpiar Todo</span>
-            </button>
+            <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer">
+                📂 Importar
+                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+            </label>
         </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden relative">
+    <!-- Main Container -->
+    <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
         
-        <!-- SIDEBAR PANEL -->
-        <aside class="w-full md:w-[420px] bg-cardbg border-r border-slate-800 flex flex-col shrink-0 z-10 shadow-2xl transition-all duration-300">
+        <!-- Sidebar / Panel de Control -->
+        <div id="sidebar" class="w-full lg:w-96 bg-slate-800 border-r border-slate-700 p-4 overflow-y-auto flex flex-col gap-4">
             
-            <!-- Tabs Navigation -->
-            <div class="grid grid-cols-4 bg-slate-900/60 p-1 border-b border-slate-800 text-xs font-semibold text-slate-400 text-center">
-                <button onclick="app.switchTab('fdt')" id="tab-fdt" class="py-2.5 rounded-md transition text-blue-400 bg-slate-800 shadow">
-                    <i class="fa-solid fa-server block mb-0.5"></i> FDT & Feeders
-                </button>
-                <button onclick="app.switchTab('naps')" id="tab-naps" class="py-2.5 rounded-md transition hover:text-slate-200">
-                    <i class="fa-solid fa-box block mb-0.5"></i> NAPs
-                </button>
-                <button onclick="app.switchTab('houses')" id="tab-houses" class="py-2.5 rounded-md transition hover:text-slate-200">
-                    <i class="fa-solid fa-house block mb-0.5"></i> Manzanas
-                </button>
-                <button onclick="app.switchTab('drops')" id="tab-drops" class="py-2.5 rounded-md transition hover:text-slate-200">
-                    <i class="fa-solid fa-route block mb-0.5"></i> Drops
-                </button>
-            </div>
-
-            <!-- Tab Contents Area -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-6">
-
-                <div id="section-fdt" class="tab-section space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                            <i class="fa-solid fa-server text-blue-500"></i>
-                            <span>Registro de FDT & Cables Feeder</span>
-                        </h2>
-                        <span class="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20" id="fdt-counter">0 Registrados</span>
-                    </div>
-                    
-                    <form id="form-fdt" onsubmit="app.saveFDT(event)" class="space-y-3 bg-slate-900/40 p-3.5 rounded-xl border border-slate-800">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Nombre / Identificador FDT</label>
-                            <input type="text" id="fdt-name" required placeholder="Ej: FDT-ZONA-01" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Latitud</label>
-                                <input type="number" step="any" id="fdt-lat" required placeholder="10.0485" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Longitud</label>
-                                <input type="number" step="any" id="fdt-lng" required placeholder="-69.3245" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Nomenclatura Cable Feeder (Troncal)</label>
-                            <input type="text" id="fdt-feeder" placeholder="Ej: FD-01-CENTRAL-FDT01" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Hilos Totales</label>
-                                <input type="number" id="fdt-fibers" value="48" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Capacidad Splitter</label>
-                                <select id="fdt-splitter" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                    <option value="1:8">1:8</option>
-                                    <option value="1:16" selected>1:16</option>
-                                    <option value="1:32">1:32</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg text-sm shadow transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Guardar FDT</span>
-                        </button>
-                    </form>
-                    
-                    <div class="space-y-2" id="list-fdt-container">
-                        <!-- Dynamic FDT list inserted here -->
-                    </div>
+            <!-- Selector de Tipo de Registro (Solo visible en Modo Edición) -->
+            <div id="editControlsContainer" class="flex flex-col gap-4">
+                <div class="bg-slate-700/50 p-3 rounded-lg border border-slate-600">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">¿Qué deseas registrar en el mapa?</label>
+                    <select id="elementType" class="w-full bg-slate-700 text-white text-sm rounded p-2 border border-slate-600 focus:outline-none focus:border-sky-400">
+                        <option value="fdt">Nodo FDT (Terminal de Distribución)</option>
+                        <option value="nap">Caja NAP (Distribución de Manzana)</option>
+                        <option value="house">Casa / Inmueble / Cliente</option>
+                        <option value="drop">Trazar Drop (Acometida a Casa)</option>
+                    </select>
                 </div>
 
-                <div id="section-naps" class="tab-section space-y-4 hidden">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                            <i class="fa-solid fa-box text-amber-500"></i>
-                            <span>Gestión de Cajas NAP</span>
-                        </h2>
-                        <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20" id="nap-counter">0 Registradas</span>
-                    </div>
-
-                    <form id="form-nap" onsubmit="app.saveNAP(event)" class="space-y-3 bg-slate-900/40 p-3.5 rounded-xl border border-slate-800">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Asociar a FDT</label>
-                            <select id="nap-fdt-parent" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                <option value="">Seleccione FDT Principal...</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Nº Manzana</label>
-                                <input type="text" id="nap-block" required placeholder="Ej: M-12" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Nomenclatura NAP</label>
-                                <input type="text" id="nap-name" required placeholder="Ej: NAP-M12-01" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Latitud</label>
-                                <input type="number" step="any" id="nap-lat" required placeholder="10.0490" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Longitud</label>
-                                <input type="number" step="any" id="nap-lng" required placeholder="-69.3250" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Puertos Totales</label>
-                            <select id="nap-ports" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                <option value="8" selected>8 Puertos</option>
-                                <option value="16">16 Puertos</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 rounded-lg text-sm shadow transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Guardar Caja NAP</span>
-                        </button>
-                    </form>
-
-                    <div class="space-y-2" id="list-nap-container">
-                        <!-- Dynamic NAP list inserted here -->
-                    </div>
+                <!-- Formulario Dinámico -->
+                <div id="formContainer" class="bg-slate-700/30 p-3 rounded-lg border border-slate-600/50 text-sm">
+                    <!-- Se llena dinámicamente con JS según la selección -->
                 </div>
 
-                <div id="section-houses" class="tab-section space-y-4 hidden">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                            <i class="fa-solid fa-house text-emerald-500"></i>
-                            <span>Gestión de Manzanas & Casas</span>
-                        </h2>
-                        <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20" id="house-counter">0 Registradas</span>
-                    </div>
-
-                    <form id="form-house" onsubmit="app.saveHouse(event)" class="space-y-3 bg-slate-900/40 p-3.5 rounded-xl border border-slate-800">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Nº Manzana</label>
-                                <input type="text" id="house-block" required placeholder="Ej: M-12" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Nº Casa / Inmueble</label>
-                                <input type="text" id="house-number" required placeholder="Ej: #45" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Dirección o Referencia</label>
-                            <input type="text" id="house-address" required placeholder="Ej: Calle 5 con Av. Principal" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Latitud</label>
-                                <input type="number" step="any" id="house-lat" required placeholder="10.0492" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Longitud</label>
-                                <input type="number" step="any" id="house-lng" required placeholder="-69.3255" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Estado del Servicio</label>
-                            <select id="house-status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                <option value="Disponible">Disponible (Sin cliente)</option>
-                                <option value="Activo">Cliente Activo (Conectado)</option>
-                                <option value="Pendiente">Instalación Pendiente</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-lg text-sm shadow transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Guardar Casa / Cliente</span>
-                        </button>
-                    </form>
-
-                    <div class="space-y-2" id="list-house-container">
-                        <!-- Dynamic houses list inserted here -->
-                    </div>
+                <div class="flex gap-2">
+                    <button onclick="saveElement()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 px-4 rounded text-sm transition shadow">
+                        Registrar en Coordenada
+                    </button>
+                    <button onclick="clearMarkers()" class="bg-rose-600/80 hover:bg-rose-500 text-white text-xs py-2 px-3 rounded transition" title="Borrar todo localmente">
+                        🗑️ Limpiar
+                    </button>
                 </div>
-
-                <div id="section-drops" class="tab-section space-y-4 hidden">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                            <i class="fa-solid fa-route text-purple-500"></i>
-                            <span>Registro de Acometidas (Drops)</span>
-                        </h2>
-                        <span class="text-xs bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20" id="drop-counter">0 Registrados</span>
-                    </div>
-
-                    <form id="form-drop" onsubmit="app.saveDrop(event)" class="space-y-3 bg-slate-900/40 p-3.5 rounded-xl border border-slate-800">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Seleccionar Caja NAP Origen</label>
-                            <select id="drop-nap" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                <option value="">Seleccione NAP...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-400 mb-1">Seleccionar Casa Destino</label>
-                            <select id="drop-house" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                                <option value="">Seleccione Casa...</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Nº Puerto NAP</label>
-                                <input type="number" id="drop-port" min="1" max="16" value="1" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Métrica / Longitud Est. (m)</label>
-                                <input type="number" id="drop-length" value="75" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-lg text-sm shadow transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Trazar Acometida Drop</span>
-                        </button>
-                    </form>
-
-                    <div class="space-y-2" id="list-drop-container">
-                        <!-- Dynamic drops list inserted here -->
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Map click helper tip -->
-            <div class="p-3 bg-slate-900 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between shrink-0">
-                <span class="flex items-center space-x-1.5">
-                    <i class="fa-solid fa-circle-info text-blue-400"></i>
-                    <span>Haz clic en el mapa para capturar coordenadas.</span>
-                </span>
-                <span id="coord-helper" class="font-mono text-slate-500 text-[10px]">Lat: -, Lng: -</span>
+            <!-- Panel Informativo para el Modo Visual -->
+            <div id="viewModeMessage" class="hidden bg-sky-900/30 border border-sky-600/40 p-3 rounded-lg text-xs text-sky-200">
+                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Puedes hacer clic en cualquier elemento del mapa para ver su nomenclatura, estado y conexiones sin riesgo de modificar la red.
             </div>
 
-        </aside>
-
-        <!-- MAP CONTAINER -->
-        <main class="flex-1 relative h-full">
-            <div id="map" class="w-full h-full z-0"></div>
-            
-            <!-- Map Layers Filter Overlay -->
-            <div class="absolute top-4 right-4 bg-cardbg/90 backdrop-blur border border-slate-700 p-2.5 rounded-xl shadow-xl z-10 flex flex-col space-y-2 text-xs">
-                <span class="font-semibold text-slate-300 border-b border-slate-700 pb-1">Filtrar Capas en Mapa</span>
-                <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
-                    <input type="checkbox" id="layer-fdt" checked onchange="app.toggleLayer('fdt')" class="rounded bg-slate-800 border-slate-600 text-blue-600 focus:ring-0">
-                    <span class="flex items-center space-x-1.5"><i class="fa-solid fa-server text-blue-400 w-4"></i><span>FDTs</span></span>
+            <!-- Filtros de Visualización (Siempre visibles) -->
+            <div class="bg-slate-700/40 p-3 rounded-lg border border-slate-600 text-xs flex flex-col gap-2">
+                <span class="font-semibold text-slate-300">Filtros de Capas:</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="filterFdt" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Nodos FDT
                 </label>
-                <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
-                    <input type="checkbox" id="layer-naps" checked onchange="app.toggleLayer('naps')" class="rounded bg-slate-800 border-slate-600 text-amber-500 focus:ring-0">
-                    <span class="flex items-center space-x-1.5"><i class="fa-solid fa-box text-amber-400 w-4"></i><span>Cajas NAP</span></span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="filterNap" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Cajas NAP
                 </label>
-                <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
-                    <input type="checkbox" id="layer-houses" checked onchange="app.toggleLayer('houses')" class="rounded bg-slate-800 border-slate-600 text-emerald-500 focus:ring-0">
-                    <span class="flex items-center space-x-1.5"><i class="fa-solid fa-house text-emerald-400 w-4"></i><span>Casas / Inmuebles</span></span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="filterHouse" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Casas / Clientes
                 </label>
-                <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
-                    <input type="checkbox" id="layer-drops" checked onchange="app.toggleLayer('drops')" class="rounded bg-slate-800 border-slate-600 text-purple-500 focus:ring-0">
-                    <span class="flex items-center space-x-1.5"><i class="fa-solid fa-route text-purple-400 w-4"></i><span>Drops (Acometidas)</span></span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="filterDrop" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Acometidas (Drops)
                 </label>
             </div>
-        </main>
 
-    </div>
+            <!-- Coordenadas seleccionadas actuales -->
+            <div class="bg-slate-900/60 p-2.5 rounded border border-slate-700 text-xs text-slate-400">
+                <span class="font-semibold text-slate-300">Punto seleccionado en mapa:</span>
+                <div id="selectedCoords" class="text-sky-400 font-mono mt-1">Haz clic en el mapa...</div>
+            </div>
 
-    <div id="custom-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-cardbg border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl space-y-4">
-            <div id="modal-icon" class="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto text-xl border border-blue-500/20">
-                <i class="fa-solid fa-info"></i>
-            </div>
-            <div class="text-center space-y-1">
-                <h3 id="modal-title" class="font-bold text-base text-slate-100">Título del Mensaje</h3>
-                <p id="modal-desc" class="text-xs text-slate-400">Descripción detallada de la notificación.</p>
-            </div>
-            <div id="modal-buttons" class="flex space-x-2 pt-2">
-                <button onclick="app.closeModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-xs font-medium border border-slate-700 transition">Entendido</button>
-            </div>
         </div>
+
+        <!-- Mapa Container -->
+        <div id="map" class="flex-1 z-0"></div>
+
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Script de la Aplicación -->
     <script>
-        class ISPManager {
-            constructor() {
-                // Initialize default state from localStorage or mock demo data
-                this.state = JSON.parse(localStorage.getItem('isp_network_data')) || {
-                    fdts: [
-                        { id: 'fdt-1', name: 'FDT-ZONA-01', lat: 10.0485, lng: -69.3245, feeder: 'FD-01-CENTRAL', fibers: 48, splitter: '1:16' }
-                    ],
-                    naps: [
-                        { id: 'nap-1', fdtId: 'fdt-1', block: 'M-01', name: 'NAP-M01-01', lat: 10.0490, lng: -69.3250, ports: 8 },
-                        { id: 'nap-2', fdtId: 'fdt-1', block: 'M-02', name: 'NAP-M02-01', lat: 10.0478, lng: -69.3235, ports: 8 }
-                    ],
-                    houses: [
-                        { id: 'house-1', block: 'M-01', number: '#14', address: 'Calle Principal con Carrera 3', lat: 10.0492, lng: -69.3253, status: 'Activo' },
-                        { id: 'house-2', block: 'M-01', number: '#16', address: 'Calle Principal', lat: 10.0494, lng: -69.3256, status: 'Disponible' },
-                        { id: 'house-3', block: 'M-02', number: '#22', address: 'Av. Las Industrias', lat: 10.0475, lng: -69.3230, status: 'Pendiente' }
-                    ],
-                    drops: [
-                        { id: 'drop-1', napId: 'nap-1', houseId: 'house-1', port: 1, length: 45 }
-                    ]
-                };
+        // Coordenadas iniciales centradas en Barquisimeto / Cabudare
+        const defaultLat = 10.0678;
+        const defaultLng = -69.3473;
 
-                this.map = null;
-                this.layers = {
-                    fdt: L.layerGroup(),
-                    naps: L.layerGroup(),
-                    houses: L.layerGroup(),
-                    drops: L.layerGroup()
-                };
+        let map = L.map('map').setView([defaultLat, defaultLng], 14);
 
-                this.activeTab = 'fdt';
-                this.initApp();
+        // Capa satelital limpia (Esri World Imagery)
+        let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        }).addTo(map);
+
+        let selectedLat = null;
+        let selectedLng = null;
+        let tempMarker = null;
+
+        // Estructura de datos almacenados
+        let networkData = JSON.parse(localStorage.getItem('isp_inter_bqto_data')) || {
+            fdts: [],
+            naps: [],
+            houses: [],
+            drops: []
+        };
+
+        let mapLayers = L.layerGroup().addTo(map);
+        let currentMode = 'edit'; // 'edit' o 'view'
+
+        // Cambiar dinámicamente entre Modo Edición y Modo Visual
+        document.getElementById('appMode').addEventListener('change', function(e) {
+            currentMode = e.target.value;
+            const editControls = document.getElementById('editControlsContainer');
+            const viewMsg = document.getElementById('viewModeMessage');
+
+            if (currentMode === 'view') {
+                editControls.classList.add('hidden');
+                viewMsg.classList.remove('hidden');
+                if (tempMarker) {
+                    map.removeLayer(tempMarker);
+                    tempMarker = null;
+                }
+                document.getElementById('selectedCoords').innerText = "Modo Solo Visualización activado.";
+            } else {
+                editControls.classList.remove('hidden');
+                viewMsg.classList.add('hidden');
             }
+        });
 
-            initApp() {
-                // Default coordinates (Barquisimeto center or sample point)
-                const defaultLat = 10.0485;
-                const defaultLng = -69.3245;
+        // Manejo de formularios dinámicos
+        const elementTypeSelect = document.getElementById('elementType');
+        elementTypeSelect.addEventListener('change', renderForm);
 
-                this.map = L.map('map', {
-                    zoomControl: false
-                }).setView([defaultLat, defaultLng], 16);
+        function renderForm() {
+            const type = elementTypeSelect.value;
+            const container = document.getElementById('formContainer');
+            
+            if (type === 'fdt') {
+                container.innerHTML = `
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nomenclatura FDT:</label>
+                    <input type="text" id="fdtName" placeholder="Ej: FDT-ESTESTE-01" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Capacidad Hilos / Troncal:</label>
+                    <input type="text" id="fdtFeeder" placeholder="Ej: Feeder 48H (Nodo Central)" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                `;
+            } else if (type === 'nap') {
+                let fdtOptions = networkData.fdts.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+                if(!fdtOptions) fdtOptions = `<option value="Principal">Principal (Sin FDT creado)</option>`;
+                
+                container.innerHTML = `
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Código NAP:</label>
+                    <input type="text" id="napName" placeholder="Ej: NAP-M12-C04" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Manzana:</label>
+                            <input type="text" id="napBlock" placeholder="Ej: M-12" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Puertos Totales:</label>
+                            <select id="napPorts" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                                <option value="8">8 Puertos</option>
+                                <option value="16" selected>16 Puertos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">FDT Asociado:</label>
+                    <select id="napFdt" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">${fdtOptions}</select>
+                `;
+            } else if (type === 'house') {
+                container.innerHTML = `
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nombre / Cliente:</label>
+                    <input type="text" id="houseClient" placeholder="Ej: Edgar Salones" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Nº Manzana:</label>
+                            <input type="text" id="houseBlock" placeholder="Ej: 12" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Nº Casa:</label>
+                            <input type="text" id="houseNumber" placeholder="Ej: #45" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        </div>
+                    </div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Estado Servicio:</label>
+                    <select id="houseStatus" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        <option value="Activo">🟢 Activo (Con servicio)</option>
+                        <option value="Disponible">🔵 Disponible (Pasada de Fibra)</option>
+                        <option value="Pendiente">🟡 Instalación Pendiente</option>
+                    </select>
+                `;
+            } else if (type === 'drop') {
+                let napOptions = networkData.naps.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
+                let houseOptions = networkData.houses.map(h => `<option value="${h.client} (M:${h.block} C:${h.houseNum})">${h.client} - M:${h.block}</option>`).join('');
+                
+                if(!napOptions || !houseOptions) {
+                    container.innerHTML = `<p class="text-amber-400 text-xs">⚠️ Debes registrar primero al menos una Caja NAP y una Casa para trazar el Drop.</p>`;
+                    return;
+                }
 
-                // Add Zoom control to top-left or bottom-right
-                L.control.zoom({ position: 'bottomright' }).addTolist = true;
-                L.control.zoom({ position: 'bottomright' }).addTo(this.map);
-
-                // Add Esri World Imagery (Satellite) basemap
-                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                    maxZoom: 19
-                }).addTo(this.map);
-
-                // Add secondary reference labels layer on top of satellite
-                L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                    maxZoom: 19
-                }).addTo(this.map);
-
-                // Add all layer groups to map
-                Object.values(this.layers).forEach(layer => layer.addTo(this.map));
-
-                // Map click listener to capture coordinates for forms
-                this.map.on('click', (e) => {
-                    const lat = e.latlng.lat.toFixed(6);
-                    const lng = e.latlng.lng.toFixed(6);
+                container.innerHTML = `
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Caja NAP Origen:</label>
+                    <select id="dropNap" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">${napOptions}</select>
                     
-                    document.getElementById('coord-helper').innerText = `Lat: ${lat}, Lng: ${lng}`;
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Casa Destino:</label>
+                    <select id="dropHouse" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600 mb-2">${houseOptions}</select>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Puerto NAP:</label>
+                            <input type="text" id="dropPort" placeholder="Ej: P-04" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Metraje Aprox:</label>
+                            <input type="text" id="dropMeters" placeholder="Ej: 120m" class="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-600">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        renderForm();
 
-                    // Auto-fill active form coordinates
-                    if (this.activeTab === 'fdt') {
-                        document.getElementById('fdt-lat').value = lat;
-                        document.getElementById('fdt-lng').value = lng;
-                    } else if (this.activeTab === 'naps') {
-                        document.getElementById('nap-lat').value = lat;
-                        document.getElementById('nap-lng').value = lng;
-                    } else if (this.activeTab === 'houses') {
-                        document.getElementById('house-lat').value = lat;
-                        document.getElementById('house-lng').value = lng;
-                    }
-                });
+        // Clic en el mapa para capturar coordenadas (Solo en modo edición)
+        map.on('click', function(e) {
+            if (currentMode === 'view') return; // Bloqueado en visualización
 
-                this.renderAll();
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
+
+            document.getElementById('selectedCoords').innerText = `Lat: ${selectedLat.toFixed(5)}, Lng: ${selectedLng.toFixed(5)}`;
+
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+            }
+            tempMarker = L.marker([selectedLat, selectedLng], {
+                icon: L.divIcon({
+                    className: 'custom-temp-marker',
+                    html: '<div style="background-color: #38bdf8; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(56,189,248,0.8);"></div>'
+                })
+            }).addTo(map);
+        });
+
+        // Guardar Elemento
+        function saveElement() {
+            if (currentMode === 'view') return;
+
+            const type = elementTypeSelect.value;
+
+            if (type !== 'drop' && (!selectedLat || !selectedLng)) {
+                alert('¡Epa! Tienes que hacer clic en el mapa primero para ubicar el equipo.');
+                return;
             }
 
-            switchTab(tabName) {
-                this.activeTab = tabName;
-                document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
-                document.getElementById(`section-${tabName}`).classList.remove('hidden');
-
-                // Update tab buttons styles
-                ['fdt', 'naps', 'houses', 'drops'].forEach(t => {
-                    const btn = document.getElementById(`tab-${t}`);
-                    if (t === tabName) {
-                        btn.className = 'py-2.5 rounded-md transition text-blue-400 bg-slate-800 shadow font-semibold';
-                    } else {
-                        btn.className = 'py-2.5 rounded-md transition text-slate-400 hover:text-slate-200';
-                    }
-                });
+            if (type === 'fdt') {
+                const name = document.getElementById('fdtName').value.trim();
+                const feeder = document.getElementById('fdtFeeder').value.trim();
+                if(!name) { alert('Asigna un nombre al FDT'); return; }
+                networkData.fdts.push({ name, feeder, lat: selectedLat, lng: selectedLng });
+            } 
+            else if (type === 'nap') {
+                const name = document.getElementById('napName').value.trim();
+                const block = document.getElementById('napBlock').value.trim();
+                const ports = document.getElementById('napPorts').value;
+                const fdt = document.getElementById('napFdt').value;
+                if(!name) { alert('Asigna un nombre a la NAP'); return; }
+                networkData.naps.push({ name, block, ports, fdt, lat: selectedLat, lng: selectedLng });
+            } 
+            else if (type === 'house') {
+                const client = document.getElementById('houseClient').value.trim();
+                const block = document.getElementById('houseBlock').value.trim();
+                const houseNum = document.getElementById('houseNumber').value.trim();
+                const status = document.getElementById('houseStatus').value;
+                if(!client) { alert('Escribe el nombre del cliente o inmueble'); return; }
+                networkData.houses.push({ client, block, houseNum, status, lat: selectedLat, lng: selectedLng });
             }
+            else if (type === 'drop') {
+                const napName = document.getElementById('dropNap').value;
+                const houseName = document.getElementById('dropHouse').value;
+                const port = document.getElementById('dropPort').value.trim();
+                const meters = document.getElementById('dropMeters').value.trim();
+                
+                // Buscar coordenadas de la NAP y de la Casa para trazar línea
+                const napObj = networkData.naps.find(n => n.name === napName);
+                const houseObj = networkData.houses.find(h => `${h.client} (M:${h.block} C:${h.houseNum})` === houseName);
 
-            saveState() {
-                localStorage.setItem('isp_network_data', JSON.stringify(this.state));
-                this.renderAll();
-            }
-
-            renderAll() {
-                // Clear map layers
-                Object.values(this.layers).forEach(l => l.clearLayers());
-
-                this.renderFDTs();
-                this.renderNAPs();
-                this.renderHouses();
-                this.renderDrops();
-                this.updateSelectDropdowns();
-            }
-
-            renderFDTs() {
-                const container = document.getElementById('list-fdt-container');
-                container.innerHTML = '';
-                document.getElementById('fdt-counter').innerText = `${this.state.fdts.length} Registrados`;
-
-                if (this.state.fdts.length === 0) {
-                    container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No hay FDTs registrados.</div>`;
+                if(!napObj || !houseObj) {
+                    alert('Error localizando la NAP o la Casa seleccionada.');
                     return;
                 }
 
-                this.state.fdts.forEach(fdt => {
-                    // Map Marker
-                    const icon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="bg-blue-600 text-white p-2 rounded-full shadow-lg border-2 border-white flex items-center justify-center w-8 h-8 text-xs font-bold"><i class="fa-solid fa-server"></i></div>`,
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16]
-                    });
-
-                    const marker = L.marker([fdt.lat, fdt.lng], { icon }).bindPopup(`
-                        <div class="p-2 space-y-1">
-                            <div class="font-bold text-blue-400 text-sm">${fdt.name}</div>
-                            <div class="text-xs text-slate-300"><b>Feeder:</b> ${fdt.feeder || 'N/A'}</div>
-                            <div class="text-xs text-slate-300"><b>Hilos:</b> ${fdt.fibers} | <b>Splitter:</b> ${fdt.splitter}</div>
-                        </div>
-                    `);
-                    this.layers.fdt.addLayer(marker);
-
-                    // Sidebar Item
-                    const div = document.createElement('div');
-                    div.className = 'bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
-                    div.innerHTML = `
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                <span class="font-semibold text-xs text-slate-200">${fdt.name}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-400">Feeder: ${fdt.feeder || 'Ninguno'} (${fdt.fibers} hilos)</p>
-                        </div>
-                        <div class="flex items-center space-x-1">
-                            <button onclick="app.panTo(${fdt.lat}, ${fdt.lng})" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs" title="Ver en mapa"><i class="fa-solid fa-location-crosshairs"></i></button>
-                            <button onclick="app.deleteItem('fdts', '${fdt.id}')" class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                    container.appendChild(div);
+                networkData.drops.push({
+                    napName, houseName, port, meters,
+                    from: [napObj.lat, napObj.lng],
+                    to: [houseObj.lat, houseObj.lng]
                 });
             }
 
-            renderNAPs() {
-                const container = document.getElementById('list-nap-container');
-                container.innerHTML = '';
-                document.getElementById('nap-counter').innerText = `${this.state.naps.length} Registradas`;
+            // Guardar en localStorage
+            localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
+            
+            // Limpiar marcador temporal y refrescar
+            if(tempMarker) {
+                map.removeLayer(tempMarker);
+                tempMarker = null;
+            }
+            selectedLat = null;
+            selectedLng = null;
+            document.getElementById('selectedCoords').innerText = "Guardado con éxito. Selecciona otro punto...";
+            
+            renderForm();
+            updateLayers();
+        }
 
-                if (this.state.naps.length === 0) {
-                    container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No hay Cajas NAP registradas.</div>`;
-                    return;
-                }
+        // Renderizar todos los elementos en el mapa según filtros
+        function updateLayers() {
+            mapLayers.clearLayers();
 
-                this.state.naps.forEach(nap => {
-                    const parentFdt = this.state.fdts.find(f => f.id === nap.fdtId);
-                    const fdtName = parentFdt ? parentFdt.name : 'Desconocido';
+            const showFdt = document.getElementById('filterFdt').checked;
+            const showNap = document.getElementById('filterNap').checked;
+            const showHouse = document.getElementById('filterHouse').checked;
+            const showDrop = document.getElementById('filterDrop').checked;
 
-                    // Map Marker
-                    const icon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="bg-amber-600 text-white p-2 rounded-full shadow-lg border-2 border-white flex items-center justify-center w-7 h-7 text-xs font-bold"><i class="fa-solid fa-box"></i></div>`,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
-                    });
-
-                    const marker = L.marker([nap.lat, nap.lng], { icon }).bindPopup(`
-                        <div class="p-2 space-y-1">
-                            <div class="font-bold text-amber-400 text-sm">${nap.name}</div>
-                            <div class="text-xs text-slate-300"><b>Manzana:</b> ${nap.block}</div>
-                            <div class="text-xs text-slate-300"><b>FDT Padre:</b> ${fdtName}</div>
-                            <div class="text-xs text-slate-300"><b>Puertos:</b> ${nap.ports}</div>
-                        </div>
-                    `);
-                    this.layers.naps.addLayer(marker);
-
-                    // Sidebar Item
-                    const div = document.createElement('div');
-                    div.className = 'bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
-                    div.innerHTML = `
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                <span class="font-semibold text-xs text-slate-200">${nap.name} (${nap.block})</span>
-                            </div>
-                            <p class="text-[11px] text-slate-400">FDT: ${fdtName} | Puertos: ${nap.ports}</p>
-                        </div>
-                        <div class="flex items-center space-x-1">
-                            <button onclick="app.panTo(${nap.lat}, ${nap.lng})" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs" title="Ver en mapa"><i class="fa-solid fa-location-crosshairs"></i></button>
-                            <button onclick="app.deleteItem('naps', '${nap.id}')" class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                    container.appendChild(div);
+            // 1. Dibujar Drops (Líneas)
+            if (showDrop) {
+                networkData.drops.forEach(drop => {
+                    let line = L.polyline([drop.from, drop.to], {
+                        color: '#a855f7',
+                        weight: 2,
+                        dashArray: '4, 4'
+                    }).bindPopup(`<b>Acometida Drop</b><br>NAP: ${drop.napName}<br>Puerto: ${drop.port || 'N/A'}<br>Cliente: ${drop.houseName}<br>Metraje: ${drop.meters || 'N/A'}`);
+                    mapLayers.addLayer(line);
                 });
             }
 
-            renderHouses() {
-                const container = document.getElementById('list-house-container');
-                container.innerHTML = '';
-                document.getElementById('house-counter').innerText = `${this.state.houses.length} Registradas`;
-
-                if (this.state.houses.length === 0) {
-                    container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No hay casas registradas.</div>`;
-                    return;
-                }
-
-                this.state.houses.forEach(house => {
-                    let statusColor = 'bg-slate-500';
-                    if (house.status === 'Activo') statusColor = 'bg-emerald-500';
-                    if (house.status === 'Pendiente') statusColor = 'bg-amber-500';
-
-                    // Map Marker
-                    const icon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="bg-emerald-600 text-white p-1.5 rounded-full shadow-lg border-2 border-white flex items-center justify-center w-6 h-6 text-[10px] font-bold"><i class="fa-solid fa-house"></i></div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                    });
-
-                    const marker = L.marker([house.lat, house.lng], { icon }).bindPopup(`
-                        <div class="p-2 space-y-1">
-                            <div class="font-bold text-emerald-400 text-sm">Manz: ${house.block} - Casa ${house.number}</div>
-                            <div class="text-xs text-slate-300"><b>Dir:</b> ${house.address}</div>
-                            <div class="text-xs text-slate-300"><b>Estado:</b> ${house.status}</div>
-                        </div>
-                    `);
-                    this.layers.houses.addLayer(marker);
-
-                    // Sidebar Item
-                    const div = document.createElement('div');
-                    div.className = 'bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
-                    div.innerHTML = `
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full ${statusColor}"></span>
-                                <span class="font-semibold text-xs text-slate-200">Mz: ${house.block} - Casa ${house.number}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-400">${house.address} (${house.status})</p>
-                        </div>
-                        <div class="flex items-center space-x-1">
-                            <button onclick="app.panTo(${house.lat}, ${house.lng})" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs" title="Ver en mapa"><i class="fa-solid fa-location-crosshairs"></i></button>
-                            <button onclick="app.deleteItem('houses', '${house.id}')" class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                    container.appendChild(div);
+            // 2. Dibujar FDTs
+            if (showFdt) {
+                networkData.fdts.forEach(fdt => {
+                    let iconHtml = `<div style="background-color: #0284c7; color: white; padding: 5px; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);" title="FDT: ${fdt.name}">🗄️</div>`;
+                    let marker = L.marker([fdt.lat, fdt.lng], {
+                        icon: L.divIcon({ className: 'custom-fdt-icon', html: iconHtml, iconSize: [28, 28] })
+                    }).bindPopup(`<b>Nodo FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder || 'N/A'}`);
+                    mapLayers.addLayer(marker);
                 });
             }
 
-            renderDrops() {
-                const container = document.getElementById('list-drop-container');
-                container.innerHTML = '';
-                document.getElementById('drop-counter').innerText = `${this.state.drops.length} Registrados`;
-
-                if (this.state.drops.length === 0) {
-                    container.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">No hay acometidas drop registradas.</div>`;
-                    return;
-                }
-
-                this.state.drops.forEach(drop => {
-                    const nap = this.state.naps.find(n => n.id === drop.napId);
-                    const house = this.state.houses.find(h => h.id === drop.houseId);
-
-                    if (nap && house) {
-                        // Draw polyline line connecting NAP to House
-                        const polyline = L.polyline([[nap.lat, nap.lng], [house.lat, house.lng]], {
-                            color: '#a855f7',
-                            weight: 3,
-                            dashArray: '4, 4',
-                            opacity: 0.8
-                        }).bindPopup(`
-                            <div class="p-2 space-y-1">
-                                <div class="font-bold text-purple-400 text-sm">Acometida Drop</div>
-                                <div class="text-xs text-slate-300"><b>Origen:</b> ${nap.name} (Puerto #${drop.port})</div>
-                                <div class="text-xs text-slate-300"><b>Destino:</b> Casa Mz ${house.block} - ${house.number}</div>
-                                <div class="text-xs text-slate-300"><b>Longitud:</b> ${drop.length}m</div>
-                            </div>
-                        `);
-                        this.layers.drops.addLayer(polyline);
-                    }
-
-                    // Sidebar Item
-                    const napName = nap ? nap.name : 'NAP Eliminada';
-                    const houseName = house ? `Mz: ${house.block} Casa ${house.number}` : 'Casa Eliminada';
-
-                    const div = document.createElement('div');
-                    div.className = 'bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
-                    div.innerHTML = `
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                                <span class="font-semibold text-xs text-slate-200">${napName} &rarr; ${houseName}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-400">Puerto #${drop.port} | Est: ${drop.length}m</p>
-                        </div>
-                        <div class="flex items-center space-x-1">
-                            <button onclick="app.deleteItem('drops', '${drop.id}')" class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                    container.appendChild(div);
+            // 3. Dibujar NAPs
+            if (showNap) {
+                networkData.naps.forEach(nap => {
+                    let iconHtml = `<div style="background-color: #eab308; color: black; padding: 4px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">📦 ${nap.name}</div>`;
+                    let marker = L.marker([nap.lat, nap.lng], {
+                        icon: L.divIcon({ className: 'custom-nap-icon', html: iconHtml })
+                    }).bindPopup(`<b>Caja NAP: ${nap.name}</b><br>Manzana: ${nap.block}<br>Puertos: ${nap.ports}<br>FDT Padre: ${nap.fdt}`);
+                    mapLayers.addLayer(marker);
                 });
             }
 
-            updateSelectDropdowns() {
-                // NAP FDT Parent Select
-                const napFdtSelect = document.getElementById('nap-fdt-parent');
-                const currentFdtVal = napFdtSelect.value;
-                napFdtSelect.innerHTML = '<option value="">Seleccione FDT Principal...</option>';
-                this.state.fdts.forEach(f => {
-                    const opt = document.createElement('option');
-                    opt.value = f.id;
-                    opt.textContent = `${f.name} (${f.feeder || 'Sin Feeder'})`;
-                    napFdtSelect.appendChild(opt);
+            // 4. Dibujar Casas / Clientes
+            if (showHouse) {
+                networkData.houses.forEach(house => {
+                    let color = house.status === 'Activo' ? '#22c55e' : (house.status === 'Disponible' ? '#3b82f6' : '#eab308');
+                    let iconHtml = `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.6);" title="${house.client}"></div>`;
+                    let marker = L.marker([house.lat, house.lng], {
+                        icon: L.divIcon({ className: 'custom-house-icon', html: iconHtml, iconSize: [12, 12] })
+                    }).bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block} | Casa: ${house.houseNum}<br>Estado: <span style="color:${color}; font-weight:bold;">${house.status}</span>`);
+                    mapLayers.addLayer(marker);
                 });
-                napFdtSelect.value = currentFdtVal;
-
-                // Drop NAP Select
-                const dropNapSelect = document.getElementById('drop-nap');
-                const currentNapVal = dropNapSelect.value;
-                dropNapSelect.innerHTML = '<option value="">Seleccione Caja NAP...</option>';
-                this.state.naps.forEach(n => {
-                    const opt = document.createElement('option');
-                    opt.value = n.id;
-                    opt.textContent = `${n.name} (Manzana ${n.block})`;
-                    dropNapSelect.appendChild(opt);
-                });
-                dropNapSelect.value = currentNapVal;
-
-                // Drop House Select
-                const dropHouseSelect = document.getElementById('drop-house');
-                const currentHouseVal = dropHouseSelect.value;
-                dropHouseSelect.innerHTML = '<option value="">Seleccione Casa Destino...</option>';
-                this.state.houses.forEach(h => {
-                    const opt = document.createElement('option');
-                    opt.value = h.id;
-                    opt.textContent = `Mz: ${h.block} - Casa ${h.number} (${h.address})`;
-                    dropHouseSelect.appendChild(opt);
-                });
-                dropHouseSelect.value = currentHouseVal;
-            }
-
-            saveFDT(e) {
-                e.preventDefault();
-                const newFdt = {
-                    id: 'fdt-' + Date.now(),
-                    name: document.getElementById('fdt-name').value,
-                    lat: parseFloat(document.getElementById('fdt-lat').value),
-                    lng: parseFloat(document.getElementById('fdt-lng').value),
-                    feeder: document.getElementById('fdt-feeder').value,
-                    fibers: parseInt(document.getElementById('fdt-fibers').value),
-                    splitter: document.getElementById('fdt-splitter').value
-                };
-                this.state.fdts.push(newFdt);
-                this.saveState();
-                document.getElementById('form-fdt').reset();
-                this.showModal('FDT Guardado', 'El nodo FDT y su cable Feeder se han registrado correctamente.', 'success');
-            }
-
-            saveNAP(e) {
-                e.preventDefault();
-                const newNap = {
-                    id: 'nap-' + Date.now(),
-                    fdtId: document.getElementById('nap-fdt-parent').value,
-                    block: document.getElementById('nap-block').value,
-                    name: document.getElementById('nap-name').value,
-                    lat: parseFloat(document.getElementById('nap-lat').value),
-                    lng: parseFloat(document.getElementById('nap-lng').value),
-                    ports: parseInt(document.getElementById('nap-ports').value)
-                };
-                this.state.naps.push(newNap);
-                this.saveState();
-                document.getElementById('form-nap').reset();
-                this.showModal('Caja NAP Registrada', 'La caja NAP se ha vinculado al FDT seleccionado.', 'success');
-            }
-
-            saveHouse(e) {
-                e.preventDefault();
-                const newHouse = {
-                    id: 'house-' + Date.now(),
-                    block: document.getElementById('house-block').value,
-                    number: document.getElementById('house-number').value,
-                    address: document.getElementById('house-address').value,
-                    lat: parseFloat(document.getElementById('house-lat').value),
-                    lng: parseFloat(document.getElementById('house-lng').value),
-                    status: document.getElementById('house-status').value
-                };
-                this.state.houses.push(newHouse);
-                this.saveState();
-                document.getElementById('form-house').reset();
-                this.showModal('Casa Registrada', 'El inmueble / cliente ha sido agregado exitosamente.', 'success');
-            }
-
-            saveDrop(e) {
-                e.preventDefault();
-                const newDrop = {
-                    id: 'drop-' + Date.now(),
-                    napId: document.getElementById('drop-nap').value,
-                    houseId: document.getElementById('drop-house').value,
-                    port: parseInt(document.getElementById('drop-port').value),
-                    length: parseInt(document.getElementById('drop-length').value)
-                };
-                this.state.drops.push(newDrop);
-                this.saveState();
-                document.getElementById('form-drop').reset();
-                this.showModal('Acometida Drop Trazada', 'El cable de acometida entre la NAP y la casa se ha guardado.', 'success');
-            }
-
-            deleteItem(collectionName, id) {
-                this.state[collectionName] = this.state[collectionName].filter(item => item.id !== id);
-                this.saveState();
-            }
-
-            clearAllData() {
-                if (confirm('¿Estás seguro de eliminar toda la información y reiniciar la red?')) {
-                    localStorage.removeItem('isp_network_data');
-                    this.state = { fdts: [], naps: [], houses: [], drops: [] };
-                    this.renderAll();
-                }
-            }
-
-            exportData() {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state, null, 2));
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.setAttribute("href", dataStr);
-                downloadAnchor.setAttribute("download", `isp_network_structure_${Date.now()}.json`);
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-            }
-
-            panTo(lat, lng) {
-                this.map.setView([lat, lng], 18);
-            }
-
-            toggleLayer(layerKey) {
-                const checkbox = document.getElementById(`layer-${layerKey}`);
-                if (checkbox.checked) {
-                    this.map.addLayer(this.layers[layerKey]);
-                } else {
-                    this.map.removeLayer(this.layers[layerKey]);
-                }
-            }
-
-            showModal(title, desc, type = 'info') {
-                document.getElementById('modal-title').innerText = title;
-                document.getElementById('modal-desc').innerText = desc;
-                const modal = document.getElementById('custom-modal');
-                modal.classList.remove('hidden');
-            }
-
-            closeModal() {
-                document.getElementById('custom-modal').classList.add('hidden');
             }
         }
 
-        // Initialize application instance on window load
-        let app;
-        window.onload = () => {
-            app = new ISPManager();
-        };
+        // Limpiar base de datos local
+        function clearMarkers() {
+            if(confirm('¿Seguro que quieres borrar toda la red registrada en este navegador?')) {
+                networkData = { fdts: [], naps: [], houses: [], drops: [] };
+                localStorage.removeItem('isp_inter_bqto_data');
+                updateLayers();
+                renderForm();
+                alert('Memoria limpia.');
+            }
+        }
+
+        // Exportar a JSON
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(networkData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "isp_inter_bqto_respaldo.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Importar de JSON
+        function importData(event) {
+            const fileReader = new FileReader();
+            if(event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = function(e) {
+                    try {
+                        networkData = JSON.parse(e.target.result);
+                        localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
+                        updateLayers();
+                        renderForm();
+                        alert('¡Respaldo importado con éxito!');
+                    } catch (error) {
+                        alert('Error al leer el archivo JSON.');
+                    }
+                };
+            }
+        }
+
+        // Carga inicial al abrir la página
+        updateLayers();
     </script>
 </body>
 </html>
