@@ -110,9 +110,9 @@
                                 <select id="satSelect" onchange="actualizarSatelite()" 
                                     class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition appearance-none">
                                     <optgroup label="Venezuela & Zona Norte">
-                                        <option value="-15.0" selected>Telstar 12 Vantage (15.0° W - Inter Satelital)</option>
+                                        <option value="-43.1" selected>Intelsat 11 (43.1° W - SimpleTV / DirecTV)</option>
+                                        <option value="-15.0">Telstar 12 Vantage (15.0° W - Inter Satelital)</option>
                                         <option value="-61.0">Amazonas 2/3/4A (61.0° W - Movistar / FTA)</option>
-                                        <option value="-43.1">Intelsat 11 (43.1° W - DirecTV LatAm)</option>
                                         <option value="-63.0">Telstar 14R / Estrela do Sul (63.0° W)</option>
                                         <option value="-55.5">Galaxy 34 / Intelsat (55.5° W)</option>
                                         <option value="-30.0">Hispasat 30W-5 / 30W-6 (30.0° W)</option>
@@ -127,6 +127,25 @@
                                     <i class="fa-solid fa-chevron-down"></i>
                                 </span>
                             </div>
+                        </div>
+
+                        <!-- Longitud del Satélite (Editable) -->
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Posición Orbital (° W/E)</label>
+                            <input type="number" step="any" id="satLon" required value="-43.1" oninput="calcularApuntamiento()" placeholder="Ej: -43.1" 
+                                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-accentBlue transition">
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tarjeta de Resultados Numéricos -->
+                <div class="bg-cardBg border border-slate-800/80 rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-center mb-3 border-b border-slate-800 pb-2.5">
+                        <h2 class="text-xs font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-compass text-accentCyan"></i> Valores de Apuntamiento
+                        </h2>
+                        <span id="satNameBadge" class="text-[10px] bg-blue-950/80 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-800/50 font-medium">Intelsat 11 (43.1° W)</span>
+                    </div>
                         </div>
 
                         <!-- Longitud del Satélite (Editable) -->
@@ -232,19 +251,19 @@
 
             markerAntena.bindPopup("<b>Tu Antena</b><br>¡Arrastrame sobre tu casa o techo exacto!").openPopup();
 
-            // Evento al arrastrar el marcador con ratón o touch
+            // Evento al arrastrar el marcador con ratón o touch (Actualiza en tiempo real con calcularApuntamiento(false))
             markerAntena.on('drag', function(e) {
                 const pos = markerAntena.getLatLng();
                 document.getElementById('lat').value = pos.lat.toFixed(6);
                 document.getElementById('lon').value = pos.lng.toFixed(6);
-                calcularApuntamiento(false); // calcular sin recentrar bruscamente mientras se arrastra
+                calcularApuntamiento(false); // Actualiza la línea y el satélite en tiempo real mientras se arrastra
             });
 
             markerAntena.on('dragend', function(e) {
                 const pos = markerAntena.getLatLng();
                 document.getElementById('lat').value = pos.lat.toFixed(6);
                 document.getElementById('lon').value = pos.lng.toFixed(6);
-                calcularApuntamiento(true);
+                calcularApuntamiento(false);
             });
 
             // Permitir hacer clic en el mapa para mover la antena instantáneamente
@@ -252,7 +271,7 @@
                 markerAntena.setLatLng(e.latlng);
                 document.getElementById('lat').value = e.latlng.lat.toFixed(6);
                 document.getElementById('lon').value = e.latlng.lng.toFixed(6);
-                calcularApuntamiento(true);
+                calcularApuntamiento(false);
             });
 
             calcularApuntamiento(true);
