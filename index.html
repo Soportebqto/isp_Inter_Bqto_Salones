@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISP Inter Bqto - Gestión FTTH</title>
+    <title>ISP Inter Bqto - Gestión FTTH en la Nube</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
@@ -14,17 +14,33 @@
     <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
     <style>
         #map { height: calc(100vh - 5rem); }
+        /* Custom scrollbar for panels */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 flex flex-col h-screen overflow-hidden">
+
+    <!-- Custom Notification Modal (Replaces alert/confirm) -->
+    <div id="customModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 text-center">
+            <div id="modalIcon" class="text-3xl mb-3">📡</div>
+            <h3 id="modalTitle" class="text-lg font-bold text-sky-400 mb-2">Aviso del Sistema</h3>
+            <p id="modalMessage" class="text-sm text-slate-300 mb-5">Mensaje aquí...</p>
+            <div id="modalButtons" class="flex justify-center gap-3">
+                <button id="modalBtnOk" onclick="closeModal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-5 py-2 rounded-lg text-xs transition shadow">Entendido</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Header -->
     <header class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex flex-wrap justify-between items-center shadow-md">
         <div>
             <h1 class="text-xl font-bold text-sky-400 flex items-center gap-2">
-                📡 ISP Inter Bqto
+                📡 ISP Inter Bqto <span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full font-normal">☁️ Nube Activa</span>
             </h1>
-            <p class="text-xs text-slate-400">Gestión de Fibra Óptica FTTH & Redes Bqto-Cabudare</p>
+            <p class="text-xs text-slate-400">Fibra Óptica FTTH & Redes Bqto-Cabudare (Sincronizado en tiempo real)</p>
         </div>
         
         <div class="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap">
@@ -37,20 +53,21 @@
                 </select>
             </div>
 
+            <!-- Botón Sincronizar Google Sheets -->
+            <button onclick="openSheetsModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow flex items-center gap-1" title="Importar datos desde Google Sheets CSV">
+                📊 Sincronizar Google Sheet
+            </button>
+
             <!-- Botón KML My Maps -->
             <label class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer" title="Sube el archivo .kml de Google My Maps">
-                🌍 Importar KML My Maps
+                🌍 Importar KML
                 <input type="file" id="importKmlFile" class="hidden" accept=".kml,.kmz" onchange="importKmlMyMaps(event)">
             </label>
 
             <!-- Botones de Respaldo JSON -->
-            <button onclick="exportData()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow">
+            <button onclick="exportData()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow">
                 💾 Exportar JSON
             </button>
-            <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow cursor-pointer">
-                📂 Importar JSON
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
-            </label>
         </div>
     </header>
 
@@ -79,30 +96,39 @@
                     <button onclick="saveElement()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 px-4 rounded text-sm transition shadow">
                         Registrar en Coordenada
                     </button>
-                    <button onclick="clearMarkers()" class="bg-rose-600/80 hover:bg-rose-500 text-white text-xs py-2 px-3 rounded transition" title="Borrar todo localmente">
-                        🗑️ Limpiar
+                    <button onclick="clearCloudDatabase()" class="bg-rose-600/80 hover:bg-rose-500 text-white text-xs py-2 px-3 rounded transition" title="Borrar base de datos en la nube">
+                        🗑️ Limpiar Nube
                     </button>
                 </div>
             </div>
 
             <!-- Panel Informativo Modo Visual -->
             <div id="viewModeMessage" class="hidden bg-sky-900/30 border border-sky-600/40 p-3 rounded-lg text-xs text-sky-200">
-                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Haz clic en los elementos para ver su información.
+                ℹ️ <strong>Modo Visual Activo:</strong> Estás navegando en modo de solo lectura. Haz clic en los elementos para ver su información en la nube.
             </div>
 
             <!-- Filtros de Visualización -->
             <div class="bg-slate-700/40 p-3 rounded-lg border border-slate-600 text-xs flex flex-col gap-2">
                 <span class="font-semibold text-slate-300">Filtros de Capas:</span>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterFdt" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Nodos FDT</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterNap" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Cajas NAP</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterHouse" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Casas / Clientes</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterDrop" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Acometidas (Drops)</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterKml" checked onchange="toggleKmlLayer()" class="rounded bg-slate-900 border-slate-600 text-amber-500"> Ver Trazas KML Importadas</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterFdt" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Nodos FDT (<span id="countFdt">0</span>)</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterNap" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Cajas NAP (<span id="countNap">0</span>)</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterHouse" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Casas / Clientes (<span id="countHouse">0</span>)</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterDrop" checked onchange="updateLayers()" class="rounded bg-slate-900 border-slate-600 text-sky-500"> Ver Acometidas Drops (<span id="countDrop">0</span>)</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="filterKml" checked onchange="toggleKmlLayer()" class="rounded bg-slate-900 border-slate-600 text-amber-500"> Ver Trazas KML (<span id="countKml">0</span>)</label>
             </div>
 
             <div class="bg-slate-900/60 p-2.5 rounded border border-slate-700 text-xs text-slate-400">
                 <span class="font-semibold text-slate-300">Punto seleccionado en mapa:</span>
                 <div id="selectedCoords" class="text-sky-400 font-mono mt-1">Haz clic en el mapa...</div>
+            </div>
+
+            <!-- Panel Estado Cloud -->
+            <div class="bg-slate-900/80 p-3 rounded border border-emerald-500/30 text-xs text-slate-300 flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                    <span class="font-semibold text-emerald-400">Estado Cloud DB:</span>
+                    <span id="cloudStatus" class="inline-block w-2 h-2 rounded-full bg-yellow-500"></span>
+                </div>
+                <div id="cloudUser" class="font-mono text-[10px] text-slate-400 truncate">Conectando...</div>
             </div>
 
         </div>
@@ -112,8 +138,34 @@
 
     </div>
 
-    <!-- Script de la Aplicación -->
-    <script>
+    <!-- Modal para Google Sheets -->
+    <div id="sheetsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl shadow-2xl max-w-lg w-full mx-4">
+            <h3 class="text-lg font-bold text-emerald-400 mb-2 flex items-center gap-2">📊 Sincronizar con Google Sheets</h3>
+            <p class="text-xs text-slate-300 mb-4">
+                Pega el enlace de tu Google Sheet publicado como <b>CSV</b> (o ingresa los datos en formato CSV con columnas: <code>tipo,nombre,lat,lng,extra1,extra2,extra3</code>).
+            </p>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-300 mb-1">URL Pública del CSV (Google Sheets -> Publicar en la web -> CSV):</label>
+                <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" class="w-full bg-slate-900 text-white text-xs p-2.5 rounded border border-slate-600 focus:outline-none focus:border-emerald-400 font-mono">
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-300 mb-1">O pega el texto CSV directamente aquí:</label>
+                <textarea id="sheetCsvText" rows="5" placeholder="tipo,nombre,lat,lng,extra1,extra2&#10;fdt,FDT-ESTESTE-01,10.0678,-69.3473,Troncal 48H&#10;house,Edgar Salones,10.0680,-69.3475,M-12,Casa 45,Activo" class="w-full bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 focus:outline-none focus:border-emerald-400 font-mono"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeSheetsModal()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-4 py-2 rounded font-semibold">Cancelar</button>
+                <button onclick="importFromGoogleSheets()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded font-semibold">Importar y Sincronizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Firebase & Aplicación -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const defaultLat = 10.0678;
         const defaultLng = -69.3473;
 
@@ -128,7 +180,8 @@
         let selectedLng = null;
         let tempMarker = null;
 
-        let networkData = JSON.parse(localStorage.getItem('isp_inter_bqto_data')) || {
+        // Estructura de datos en memoria sincronizada con la nube
+        let networkData = {
             fdts: [],
             naps: [],
             houses: [],
@@ -139,6 +192,83 @@
         let mapLayers = L.layerGroup().addTo(map);
         let kmlImportLayer = L.layerGroup().addTo(map);
         let currentMode = 'edit';
+
+        // Variables Firebase proporcionadas por el entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'isp-inter-bqto-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        let db = null;
+        let auth = null;
+        let isCloudReady = false;
+
+        async function initFirebase() {
+            try {
+                if (!firebaseConfig) {
+                    showModal("Modo Local", "No se detectó configuración de Firebase. Trabajando con memoria local.", "⚠️");
+                    document.getElementById('cloudStatus').className = "inline-block w-2 h-2 rounded-full bg-red-500";
+                    document.getElementById('cloudUser').innerText = "Desconectado (Modo Offline)";
+                    return;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        document.getElementById('cloudStatus').className = "inline-block w-2 h-2 rounded-full bg-emerald-500";
+                        document.getElementById('cloudUser').innerText = `ID: ${user.uid}`;
+                        isCloudReady = true;
+                        subscribeToCloudDatabase(user.uid);
+                    }
+                });
+            } catch (error) {
+                console.error("Error inicializando Firebase:", error);
+                document.getElementById('cloudStatus').className = "inline-block w-2 h-2 rounded-full bg-red-500";
+                document.getElementById('cloudUser').innerText = "Error de conexión Cloud";
+            }
+        }
+
+        function subscribeToCloudDatabase(userId) {
+            // REGLA 1: Usar estricta ruta pública para compartir datos colaborativos en la app
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'network_topology');
+            
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    networkData = {
+                        fdts: cloudData.fdts || [],
+                        naps: cloudData.naps || [],
+                        houses: cloudData.houses || [],
+                        drops: cloudData.drops || [],
+                        kmlItems: cloudData.kmlItems || []
+                    };
+                    updateLayers();
+                    renderForm();
+                } else {
+                    // Documento inicial vacío si no existe
+                    saveToCloudDatabase();
+                }
+            }, (error) => {
+                console.error("Error en sincronización en tiempo real:", error);
+            });
+        }
+
+        async function saveToCloudDatabase() {
+            if (!isCloudReady || !db) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'network_topology');
+                await setDoc(docRef, networkData);
+            } catch (err) {
+                console.error("Error guardando en la nube:", err);
+            }
+        }
 
         document.getElementById('appMode').addEventListener('change', function(e) {
             currentMode = e.target.value;
@@ -159,7 +289,7 @@
         const elementTypeSelect = document.getElementById('elementType');
         elementTypeSelect.addEventListener('change', renderForm);
 
-        function renderForm() {
+        window.renderForm = function() {
             const type = elementTypeSelect.value;
             const container = document.getElementById('formContainer');
             
@@ -231,29 +361,32 @@
             }).addTo(map);
         });
 
-        function saveElement() {
+        window.saveElement = function() {
             if (currentMode === 'view') return;
             const type = elementTypeSelect.value;
-            if (type !== 'drop' && (!selectedLat || !selectedLng)) { alert('Haz clic en el mapa primero.'); return; }
+            if (type !== 'drop' && (!selectedLat || !selectedLng)) {
+                showModal("Atención", "Haz clic en el mapa primero para ubicar el punto.", "⚠️");
+                return;
+            }
 
             if (type === 'fdt') {
                 const name = document.getElementById('fdtName').value.trim();
                 const feeder = document.getElementById('fdtFeeder').value.trim();
-                if(!name) { alert('Falta nombre'); return; }
+                if(!name) { showModal("Falta Nombre", "Por favor ingresa la nomenclatura del FDT.", "⚠️"); return; }
                 networkData.fdts.push({ name, feeder, lat: selectedLat, lng: selectedLng });
             } else if (type === 'nap') {
                 const name = document.getElementById('napName').value.trim();
                 const block = document.getElementById('napBlock').value.trim();
                 const ports = document.getElementById('napPorts').value;
                 const fdt = document.getElementById('napFdt').value;
-                if(!name) { alert('Falta nombre'); return; }
+                if(!name) { showModal("Falta Nombre", "Por favor ingresa el código de la NAP.", "⚠️"); return; }
                 networkData.naps.push({ name, block, ports, fdt, lat: selectedLat, lng: selectedLng });
             } else if (type === 'house') {
                 const client = document.getElementById('houseClient').value.trim();
                 const block = document.getElementById('houseBlock').value.trim();
                 const houseNum = document.getElementById('houseNumber').value.trim();
                 const status = document.getElementById('houseStatus').value;
-                if(!client) { alert('Falta cliente'); return; }
+                if(!client) { showModal("Falta Cliente", "Por favor ingresa el nombre del cliente o inmueble.", "⚠️"); return; }
                 networkData.houses.push({ client, block, houseNum, status, lat: selectedLat, lng: selectedLng });
             } else if (type === 'drop') {
                 const napName = document.getElementById('dropNap').value;
@@ -262,59 +395,65 @@
                 const meters = document.getElementById('dropMeters').value.trim();
                 const napObj = networkData.naps.find(n => n.name === napName);
                 const houseObj = networkData.houses.find(h => `${h.client} (M:${h.block} C:${h.houseNum})` === houseName);
-                if(!napObj || !houseObj) { alert('Error buscando NAP o Casa'); return; }
+                if(!napObj || !houseObj) { showModal("Error", "No se encontró la NAP o Casa seleccionada.", "❌"); return; }
                 networkData.drops.push({ napName, houseName, port, meters, from: [napObj.lat, napObj.lng], to: [houseObj.lat, houseObj.lng] });
             }
 
-            localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
+            saveToCloudDatabase();
             if(tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
             selectedLat = null; selectedLng = null;
-            document.getElementById('selectedCoords').innerText = "Guardado con éxito.";
+            document.getElementById('selectedCoords').innerText = "Guardado en la nube con éxito.";
             renderForm();
             updateLayers();
         }
 
-        function updateLayers() {
+        window.updateLayers = function() {
             mapLayers.clearLayers();
             const showFdt = document.getElementById('filterFdt').checked;
             const showNap = document.getElementById('filterNap').checked;
             const showHouse = document.getElementById('filterHouse').checked;
             const showDrop = document.getElementById('filterDrop').checked;
 
+            // Actualizar contadores
+            document.getElementById('countFdt').innerText = networkData.fdts.length;
+            document.getElementById('countNap').innerText = networkData.naps.length;
+            document.getElementById('countHouse').innerText = networkData.houses.length;
+            document.getElementById('countDrop').innerText = networkData.drops.length;
+            document.getElementById('countKml').innerText = networkData.kmlItems.length;
+
             if (showDrop) {
                 networkData.drops.forEach(drop => {
                     L.polyline([drop.from, drop.to], { color: '#a855f7', weight: 2, dashArray: '4, 4' })
-                        .bindPopup(`<b>Drop</b><br>NAP: ${drop.napName}<br>Cliente: ${drop.houseName}`).addTo(mapLayers);
+                        .bindPopup(`<b>Drop / Acometida</b><br>NAP: ${drop.napName}<br>Cliente: ${drop.houseName}<br>Puerto: ${drop.port || 'N/A'}<br>Metraje: ${drop.meters || 'N/A'}`).addTo(mapLayers);
                 });
             }
             if (showFdt) {
                 networkData.fdts.forEach(fdt => {
-                    let html = `<div style="background:#0284c7; color:white; padding:5px; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white;">🗄️</div>`;
+                    let html = `<div style="background:#0284c7; color:white; padding:5px; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.4);">🗄️</div>`;
                     L.marker([fdt.lat, fdt.lng], { icon: L.divIcon({ className: 'fdt', html, iconSize: [28,28] }) })
-                        .bindPopup(`<b>FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder}`).addTo(mapLayers);
+                        .bindPopup(`<b>Nodo FDT: ${fdt.name}</b><br>Troncal: ${fdt.feeder || 'N/A'}`).addTo(mapLayers);
                 });
             }
             if (showNap) {
                 networkData.naps.forEach(nap => {
-                    let html = `<div style="background:#eab308; color:black; padding:4px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid white;">📦 ${nap.name}</div>`;
+                    let html = `<div style="background:#eab308; color:black; padding:4px 6px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.4);">📦 ${nap.name}</div>`;
                     L.marker([nap.lat, nap.lng], { icon: L.divIcon({ className: 'nap', html }) })
-                        .bindPopup(`<b>NAP: ${nap.name}</b><br>Manzana: ${nap.block}<br>FDT: ${nap.fdt}`).addTo(mapLayers);
+                        .bindPopup(`<b>Caja NAP: ${nap.name}</b><br>Manzana: ${nap.block || 'N/A'}<br>Puertos: ${nap.ports || '16'}<br>FDT: ${nap.fdt || 'N/A'}`).addTo(mapLayers);
                 });
             }
             if (showHouse) {
                 networkData.houses.forEach(house => {
                     let color = house.status === 'Activo' ? '#22c55e' : (house.status === 'Disponible' ? '#3b82f6' : '#eab308');
-                    let html = `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white;"></div>`;
+                    let html = `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`;
                     L.marker([house.lat, house.lng], { icon: L.divIcon({ className: 'house', html, iconSize: [12,12] }) })
-                        .bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block} | Casa: ${house.houseNum}<br>Estado: ${house.status}`).addTo(mapLayers);
+                        .bindPopup(`<b>Cliente: ${house.client}</b><br>Manzana: ${house.block || 'N/A'} | Casa: ${house.houseNum || 'N/A'}<br>Estado: ${house.status || 'Activo'}`).addTo(mapLayers);
                 });
             }
 
             renderKmlItems();
         }
 
-        // Renderizar elementos KML interactivos y editables
-        function renderKmlItems() {
+        window.renderKmlItems = function() {
             kmlImportLayer.clearLayers();
             if(!document.getElementById('filterKml').checked) return;
 
@@ -333,7 +472,7 @@
                     layer.bindPopup(`
                         <div style="font-family: sans-serif; font-size: 12px;">
                             <b>Traza KML:</b> <span id="lbl-${index}">${item.name}</span><br><br>
-                            <div id="edit-box-${index}">
+                            <div>
                                 <input type="text" id="inp-${index}" value="${item.name}" class="bg-slate-700 text-white p-1 rounded border border-slate-600 text-xs mb-1" style="width:130px;">
                                 <button onclick="renameKmlItem(${index})" class="bg-sky-600 text-white px-2 py-0.5 rounded text-xs">Renombrar</button>
                             </div>
@@ -344,19 +483,17 @@
             });
         }
 
-        // Renombrar elemento KML
         window.renameKmlItem = function(index) {
             const newVal = document.getElementById(`inp-${index}`).value.trim();
             if(newVal) {
                 networkData.kmlItems[index].name = newVal;
-                localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
+                saveToCloudDatabase();
                 updateLayers();
-                alert('¡Nombre actualizado con éxito!');
+                showModal("Éxito", "Nombre actualizado en la nube correctamente.", "✨");
             }
         };
 
-        // Importar y convertir KML de My Maps a objetos editables
-        function importKmlMyMaps(event) {
+        window.importKmlMyMaps = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -384,14 +521,14 @@
                     }
                 });
 
-                localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
+                saveToCloudDatabase();
                 updateLayers();
-                alert(`¡Se importaron y convirtieron ${addedCount} elementos del KML con éxito! Ahora puedes hacerles clic y renombrarlos.`);
+                showModal("Importación Exitosa", `Se importaron y sincronizaron ${addedCount} elementos del KML a la nube.`, "🌍");
             };
             reader.readAsText(file);
         }
 
-        function toggleKmlLayer() {
+        window.toggleKmlLayer = function() {
             if(document.getElementById('filterKml').checked) {
                 map.addLayer(kmlImportLayer);
             } else {
@@ -399,45 +536,144 @@
             }
         }
 
-        function clearMarkers() {
-            if(confirm('¿Borrar todo el registro guardado?')) {
-                networkData = { fdts: [], naps: [], houses: [], drops: [], kmlItems: [] };
-                localStorage.removeItem('isp_inter_bqto_data');
+        // Funciones Modal Google Sheets
+        window.openSheetsModal = function() {
+            document.getElementById('sheetsModal').classList.remove('hidden');
+        }
+        window.closeSheetsModal = function() {
+            document.getElementById('sheetsModal').classList.add('hidden');
+        }
+
+        // Importación masiva desde Google Sheets (CSV)
+        window.importFromGoogleSheets = async function() {
+            let csvData = document.getElementById('sheetCsvText').value.trim();
+            const sheetUrl = document.getElementById('sheetUrlInput').value.trim();
+
+            if (sheetUrl) {
+                try {
+                    showModal("Cargando", "Descargando datos desde Google Sheets...", "⏳");
+                    const response = await fetch(sheetUrl);
+                    csvData = await response.text();
+                } catch (err) {
+                    showModal("Error", "No se pudo descargar el CSV desde la URL proporcionada. Verifica que el enlace sea público.", "❌");
+                    return;
+                }
+            }
+
+            if (!csvData) {
+                showModal("Atención", "Ingresa una URL de Google Sheet o pega el contenido CSV.", "⚠️");
+                return;
+            }
+
+            try {
+                const lines = csvData.split('\n');
+                let importedFdt = 0;
+                let importedNap = 0;
+                let importedHouse = 0;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.startsWith('tipo')) continue; // Ignorar cabecera
+
+                    // Formato esperado: tipo, nombre, lat, lng, extra1, extra2, extra3
+                    // Ejemplos de tipo: fdt, nap, house
+                    const cols = line.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+                    if (cols.length < 4) continue;
+
+                    const type = cols[0].toLowerCase();
+                    const name = cols[1];
+                    const lat = parseFloat(cols[2]);
+                    const lng = parseFloat(cols[3]);
+
+                    if (isNaN(lat) || isNaN(lng)) continue;
+
+                    if (type === 'fdt') {
+                        const feeder = cols[4] || 'Troncal Principal';
+                        if (!networkData.fdts.some(f => f.name === name)) {
+                            networkData.fdts.push({ name, feeder, lat, lng });
+                            importedFdt++;
+                        }
+                    } else if (type === 'nap') {
+                        const block = cols[4] || 'M-General';
+                        const ports = cols[5] || '16';
+                        const fdt = cols[6] || 'Principal';
+                        if (!networkData.naps.some(n => n.name === name)) {
+                            networkData.naps.push({ name, block, ports, fdt, lat, lng });
+                            importedNap++;
+                        }
+                    } else if (type === 'house' || type === 'cliente') {
+                        const block = cols[4] || '1';
+                        const houseNum = cols[5] || '#1';
+                        const status = cols[6] || 'Activo';
+                        if (!networkData.houses.some(h => h.client === name)) {
+                            networkData.houses.push({ client: name, block, houseNum, status, lat, lng });
+                            importedHouse++;
+                        }
+                    }
+                }
+
+                saveToCloudDatabase();
                 updateLayers();
                 renderForm();
-                alert('Limpieza completa.');
+                closeSheetsModal();
+                showModal("Sincronización Exitosa", `Se importaron desde Google Sheets: ${importedFdt} FDTs, ${importedNap} NAPs y ${importedHouse} Casas/Clientes.`, "📊");
+            } catch (err) {
+                console.error(err);
+                showModal("Error", "Error procesando el formato CSV del Sheet. Asegúrate de que tenga el orden correcto (tipo,nombre,lat,lng,...).", "❌");
             }
         }
 
-        function exportData() {
+        window.clearCloudDatabase = function() {
+            showModal("Confirmación de Limpieza", "¿Estás seguro de vaciar toda la base de datos de la nube?", "🗑️", true, async () => {
+                networkData = { fdts: [], naps: [], houses: [], drops: [], kmlItems: [] };
+                await saveToCloudDatabase();
+                updateLayers();
+                renderForm();
+                showModal("Limpieza", "La base de datos en la nube ha sido reiniciada.", "✨");
+            });
+        }
+
+        window.exportData = function() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(networkData, null, 2));
             const dl = document.createElement('a');
             dl.setAttribute("href", dataStr);
-            dl.setAttribute("download", "isp_inter_bqto_respaldo.json");
+            dl.setAttribute("download", "isp_inter_bqto_respaldo_nube.json");
             document.body.appendChild(dl);
             dl.click();
             dl.remove();
         }
 
-        function importData(event) {
-            const fr = new FileReader();
-            if(event.target.files[0]) {
-                fr.readAsText(event.target.files[0], "UTF-8");
-                fr.onload = function(e) {
-                    try {
-                        networkData = JSON.parse(e.target.result);
-                        localStorage.setItem('isp_inter_bqto_data', JSON.stringify(networkData));
-                        updateLayers();
-                        renderForm();
-                        alert('Respaldo JSON cargado!');
-                    } catch (error) {
-                        alert('Error leyendo JSON.');
-                    }
+        // Custom Modal UI Helper
+        window.showModal = function(title, message, icon = "📡", showConfirm = false, onConfirmCallback = null) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('modalIcon').innerText = icon;
+            const btnContainer = document.getElementById('modalButtons');
+            
+            if (showConfirm) {
+                btnContainer.innerHTML = `
+                    <button onclick="closeModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg text-xs transition">Cancelar</button>
+                    <button id="modalBtnConfirm" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition shadow">Sí, continuar</button>
+                `;
+                document.getElementById('modalBtnConfirm').onclick = () => {
+                    closeModal();
+                    if (onConfirmCallback) onConfirmCallback();
                 };
+            } else {
+                btnContainer.innerHTML = `<button onclick="closeModal()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-5 py-2 rounded-lg text-xs transition shadow">Entendido</button>`;
             }
+            document.getElementById('customModal').classList.remove('hidden');
         }
 
-        updateLayers();
+        window.closeModal = function() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+
+        // Iniciar Firebase al cargar la ventana
+        window.onload = function() {
+            initFirebase();
+            updateLayers();
+        }
     </script>
 </body>
 </html>
